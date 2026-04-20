@@ -19,32 +19,27 @@ else:
 # ======================
 st.markdown("""
 <style>
+
+/* фон просто изображение */
 .stApp {
     background: url("https://images.unsplash.com/photo-1535131749006-b7f58c99034b");
     background-size: cover;
     background-position: center;
 }
 
-/* затемнение слоя */
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.55);
-    z-index: 0;
-}
-
-/* всё поверх */
+/* основной контейнер = TV панель */
 .block-container {
-    position: relative;
-    z-index: 1;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0, 0, 0, 0.65);
     padding: 20px;
     border-radius: 16px;
+    max-width: 1200px;
 }
+
+/* текст */
+h1, h2, h3, label, p {
+    color: white !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -77,15 +72,10 @@ if bg_url:
 # ======================
 # HEADER
 # ======================
-col_logo, col_title = st.columns([1, 5])
+if logo:
+    st.image(logo, width=120)
 
-with col_logo:
-    if logo:
-        st.image(logo, width=90)
-
-with col_title:
-    st.markdown("## ⛳ GOLF LIVE")
-    
+st.title("⛳ GOLF LIVE")    
 # ======================
 # INPUT
 # ======================
