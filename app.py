@@ -1,87 +1,141 @@
 import streamlit as st
 import pandas as pd
 import os
-from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(layout="wide")
-st_autorefresh(interval=2000)
+st.set_page_config(page_title="Golf Live Scoreboard", layout="wide")
 
-FILE = "data.csv"
+# ======================
+# DATA STORAGE
+# ======================
+SCORES_FILE = "scores.csv"
+PLAYERS_FILE = "players.csv"
 
-# INIT
-if not os.path.exists(FILE):
-    pd.DataFrame(columns=[
-        "Team","Player","Hole","Par",
-        "Strokes","Putts","Fairway","GIR"
-    ]).to_csv(FILE,index=False)
+if not os.path.exists(SCORES_FILE):
+    pd.DataFrame(columns=["Team", "Player", "Hole", "Par", "Strokes", "Putts"]).to_csv(SCORES_FILE, index=False)
 
-df = pd.read_csv(FILE)
+if not os.path.exists(PLAYERS_FILE):
+    pd.DataFrame(columns=["Player", "Team"]).to_csv(PLAYERS_FILE, index=False)
 
-st.title("⛳ Golf Match Play Live")
+scores = pd.read_csv(SCORES_FILE)
+players = pd.read_csv(PLAYERS_FILE)
 
-# ===== INPUT =====
+st.title("⛳ PGA Style Live Match Scoreboard")
+
+# ======================
+# ADD PLAYER
+# ======================
+with st.expander("➕ Add Player"):
+    name = st.text_input("Player Name")
+    team = st.selectbox("Team", ["A", "B"])
+
+    if st.button("Add Player"):
+        players.loc[len(players)] = [name, team]
+        players.to_csv(PLAYERS_FILE, index=False)
+        st.success("Player added!")
+
+# ======================
+# MARKER INPUT
+# ======================
 st.header("📱 Marker Input")
 
-team = st.selectbox("Team", ["A","B"])
-player = st.text_input("Player")
-hole = st.selectbox("Hole", list(range(1,19)))
-par = st.selectbox("Par", [3,4,5])
-strokes = st.number_input("Strokes",1,15)
-putts = st.number_input("Putts",0,6)
+if not players.empty:
 
-fairway = st.checkbox("Fairway Hit")
-gir = st.checkbox("GIR")
+    player = st.selectbox("Player", players["Player"].tolist())
+    team = players[players["Player"] == player]["Team"].values[0]
 
-if st.button("Save"):
-    df.loc[len(df)] = [team,player,hole,par,strokes,putts,fairway,gir]
-    df.to_csv(FILE,index=False)
-    st.success("Saved")
+    hole = st.selectbox("Hole", list(range(1, 19)))
+    par = st.selectbox("Par", [3, 4, 5])
 
-# ===== CALCULATIONS =====
-if not df.empty:
+    strokes = st.number_input("Strokes", 1, 15, 4)
+    putts = st.number_input("Putts", 0, 6, 2)
 
-    # auto GIR if not checked
-    df["Auto_GIR"] = df["Strokes"] <= (df["Par"] - 2)
-    df["GIR_Final"] = df["GIR"] | df["Auto_GIR"]
+    if st.button("Save Score"):
+        scores.loc[len(scores)] = [team, player, hole, par, strokes, putts]
+        scores.to_csv(SCORES_FILE, index=False)
+        st.success("Saved!")
 
-    # up & down
-    df["UpDown"] = (~df["GIR_Final"]) & (df["Strokes"] <= df["Par"])
+# ======================
+# CALCULATIONS
+# ======================
+if not scores.empty:
 
-    # ===== TEAM RESULT =====
-    hole_result = df.groupby(["Hole","Team"])["Strokes"].min().unstack()
+    st.markdown("---")
+    st.header("🏆 LIVE MATCH SCOREBOARD")
 
-    hole_result["Result"] = hole_result.apply(
-        lambda x: 1 if x["A"] < x["B"]
-        else (-1 if x["A"] > x["B"] else 0),
-        axis=1
-    )
+    df = scores.copy()
 
-    total = hole_result["Result"].sum()
+    # team best score per hole (match play logic)
+    hole_match = df.groupby(["Hole", "Team"])["Strokes"].min().unstack()
 
-    st.header(f"🏆 Match Score: {total}")
+    hole_match = hole_match.dropna()
 
-    # ===== COLORS =====
+    results = []
+
+    for _, row in hole_match.iterrows():
+        if row["A"] < row["B"]:
+            results.append(("A", 1))
+        elif row["A"] > row["B"]:
+            results.append(("B", 1))
+        else:
+            results.append(("AS", 0))
+
+    result_df = pd.DataFrame(results, columns=["Winner", "Point"])
+
+    a_points = sum(1 for r in results if r[0] == "A")
+    b_points = sum(1 for r in results if r[0] == "B")
+
+    # ======================
+    # MATCH STATUS
+    # ======================
+    if a_points > b_points:
+        status = f"🟢 Team A is {a_points - b_points} UP"
+    elif b_points > a_points:
+        status = f"🔴 Team B is {b_points - a_points} UP"
+    else:
+        status = "🔵 ALL SQUARE"
+
+    st.subheader(status)
+
+    # ======================
+    # SCOREBOARD TABLE
+    # ======================
+    display = hole_match.copy()
+    display["Winner"] = result_df["Winner"].values
+
     def color(val):
-        if val == 1:
+        if val == "A":
             return "background-color: green"
-        elif val == -1:
+        elif val == "B":
             return "background-color: red"
         else:
             return "background-color: blue"
 
     st.dataframe(
-        hole_result.style.applymap(color, subset=["Result"]),
+        display.style.applymap(color, subset=["Winner"]),
         use_container_width=True
     )
 
-    # ===== STATS =====
-    st.header("📊 Stats")
+    # ======================
+    # BIG SCORE CARDS
+    # ======================
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("Team A", a_points)
+
+    with col2:
+        st.metric("Team B", b_points)
+
+    # ======================
+    # PLAYER STATS
+    # ======================
+    st.markdown("---")
+    st.header("📊 Player Stats")
 
     stats = df.groupby("Player").agg({
-        "Putts":"sum",
-        "Fairway":"mean",
-        "GIR_Final":"mean",
-        "UpDown":"mean"
-    })
+        "Strokes": "sum",
+        "Putts": "sum",
+        "Hole": "count"
+    }).rename(columns={"Hole": "Holes Played"})
 
-    st.dataframe(stats)
+    st.dataframe(stats, use_container_width=True)
