@@ -141,11 +141,13 @@ if st.button("💾 Сохранить результат"):
 st.markdown("## 🏆 LIVE MATCH")
 
 if not df.empty and len(st.session_state.team_list) >= 2:
-    # Берем первые две команды из актуального списка
     t1 = st.session_state.team_list[0]
     t2 = st.session_state.team_list[1]
     
+    # Группируем данные: берем лучший результат (минимальный) по каждой лунке для каждой команды
     match = df.groupby(["hole", "team"])["strokes"].min().unstack()
+    
+    # Проверяем наличие колонок, чтобы код не упал
     for t in [t1, t2]:
         if t not in match.columns:
             match[t] = 999
@@ -155,33 +157,42 @@ if not df.empty and len(st.session_state.team_list) >= 2:
     a_score, b_score = 0, 0
     results = []
 
+    # Тот самый цикл сравнения
     for _, row in match.iterrows():
         a, b = row[t1], row[t2]
         if a == 999 or b == 999:
             results.append("—")
         elif a < b:
             a_score += 1
-            results.append(f"🟢 {t1}")
+            results.append(f"🟢 {t1} Wins") # Добавили текст для ясности
         elif b < a:
             b_score += 1
-            results.append(f"🔴 {t2}")
+            results.append(f"🔴 {t2} Wins")
         else:
-            results.append("🔵 AS")
+            results.append("🔵 AS (Ничья)")
 
+    # !!! ВОТ ЭТА СТРОЧКА ВАЖНА: Добавляем расчеты в таблицу !!!
+    match["Результат лунки"] = results
+
+    # Scoreboard (Метрики)
     sc1, sc2, sc3 = st.columns([2, 3, 2])
     with sc1:
         st.metric(t1, a_score)
     with sc2:
         if a_score > b_score:
-            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} LEADING</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} {a_score-b_score} UP</h2>", unsafe_allow_html=True)
         elif b_score > a_score:
-            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} LEADING</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} {b_score-a_score} UP</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='text-align:center;color:#4da6ff;'>ALL SQUARE</h2>", unsafe_allow_html=True)
     with sc3:
         st.metric(t2, b_score)
 
-    st.dataframe(match[[t1, t2]].replace(999, "-"), use_container_width=True)
+    # Выводим финальную таблицу с новой колонкой
+    # Показываем только нужные колонки и заменяем технические 999 на прочерк
+    display_df = match[[t1, t2, "Результат лунки"]].replace(999, "-")
+    st.dataframe(display_df, use_container_width=True)
+
 
 # ======================
 # TEAM VIEW
