@@ -195,3 +195,30 @@ if st.session_state.team_list:
         current_t = st.session_state.team_list[i]
         with tab:
             st.dataframe(df[df["team"] == current_t], use_container_width=True)
+
+
+# ======================
+# ДЕМО-РЕЖИМ (Добавьте в конец файла)
+# ======================
+st.sidebar.markdown("---")
+if st.sidebar.button("🚀 Запустить демо-матч"):
+    # Создаем тестовые данные
+    demo_data = [
+        {"team": "BMW", "player": "Иван", "hole": 1, "par": 4, "strokes": 4, "putts": 2},
+        {"team": "Audi", "player": "Петр", "hole": 1, "par": 4, "strokes": 5, "putts": 3},
+        {"team": "BMW", "player": "Иван", "hole": 2, "par": 3, "strokes": 3, "putts": 1},
+        {"team": "Audi", "player": "Петр", "hole": 2, "par": 3, "strokes": 3, "putts": 2},
+        {"team": "BMW", "player": "Иван", "hole": 3, "par": 5, "strokes": 6, "putts": 2},
+        {"team": "Audi", "player": "Петр", "hole": 3, "par": 5, "strokes": 4, "putts": 1},
+    ]
+    
+    # Убеждаемся, что эти команды есть в списке
+    st.session_state.team_list = ["BMW", "Audi"]
+    save_teams(st.session_state.team_list)
+    
+    # Сохраняем в CSV
+    demo_df = pd.DataFrame(demo_data)
+    demo_df.to_csv(FILE, index=False)
+    
+    st.rerun()
+
