@@ -188,12 +188,24 @@ if not df.empty and len(st.session_state.team_list) >= 2:
         else:
             seg_results.append((name, f"🔵 AS ({t1}={t2})"))
 
-    # 2. ВЫВОД ОЧКОВ ПО ОТРЕЗКАМ (Верхний ряд)
+    # 2. ВЫВОД ОЧКОВ ПО ОТРЕЗКАМ (ТВ-СТИЛЬ)
     cols = st.columns(len(seg_results))
     for i, (name, res) in enumerate(seg_results):
-        cols[i].metric(name, res)
+        with cols[i]:
+            st.markdown(f"""
+                <div style="
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 10px;
+                    border-radius: 10px;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    text-align: center;
+                ">
+                    <p style="margin: 0; font-size: 14px; color: #aaa;">{name}</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: bold; white-space: nowrap;">{res}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True) # Небольшой отступ
 
     # 3. РАСЧЕТ КРУЖОЧКОВ ДЛЯ ТАБЛИЦЫ
     a_score, b_score = 0, 0
