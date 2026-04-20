@@ -42,7 +42,7 @@ else:
     df.to_csv(FILE, index=False)
 
 # ======================
-# STYLE (ТВ-ДИЗАЙН)
+# STYLE (ТВ-ДИЗАЙН - ИСПРАВЛЕНО)
 # ======================
 st.markdown("""
 <style>
@@ -55,9 +55,16 @@ st.markdown("""
     padding: 30px;
     border-radius: 20px;
 }
+
+/* ЭТО ПРАВИЛО ПРОЯВИТ ТЕКСТ В КАРТОЧКАХ */
+.match-card-container * {
+    color: #000000 !important;
+}
+
 h1, h2, h3, p, label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ======================
 # SIDEBAR (МЕНЕДЖЕР)
