@@ -25,12 +25,14 @@ if 'team_list' not in st.session_state:
     st.session_state.team_list = load_teams()
 
 # ======================
-# DATA
+# DATA (ОБНОВЛЕННЫЙ)
 # ======================
 if os.path.exists(FILE):
     df = pd.read_csv(FILE)
 else:
-    df = pd.DataFrame(columns=["team", "player", "hole", "par", "strokes", "putts"])
+    # Создаем пустой файл с НОВЫМИ колонками, которые нужны для кнопок
+    df = pd.DataFrame(columns=["match_id", "hole", "result", "pair_a", "pair_b"])
+    df.to_csv(FILE, index=False)
 
 # ======================
 # STYLE (TV LOOK)
