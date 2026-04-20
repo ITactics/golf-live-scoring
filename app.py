@@ -207,23 +207,33 @@ if not df.empty and len(st.session_state.team_list) >= 2:
 
     st.markdown("<br>", unsafe_allow_html=True) # Небольшой отступ
 
-    # 3. РАСЧЕТ КРУЖОЧКОВ ДЛЯ ТАБЛИЦЫ
+    # 3. РАСЧЕТ КРУЖОЧКОВ И ПОБЕДИТЕЛЕЙ (С ФАМИЛИЯМИ)
     a_score, b_score = 0, 0
     results = []
-    for _, row in match.iterrows():
-        a, b = row[t1], row[t2]
-        if a == 999 or b == 999:
-            results.append("—")
-        elif a < b:
-            a_score += 1
-            results.append(f"🟢 {t1} / 🔴 {t2}") 
-        elif b < a:
-            b_score += 1
-            results.append(f"🟢 {t2} / 🔴 {t1}") 
-        else:
-            results.append(f"🔵 AS ({t1} = {t2})")
 
-    match["Результат лунки"] = results
+    # Создаем вспомогательную таблицу, чтобы найти фамилию игрока с лучшим результатом
+    # (Берем только те строки, где strokes минимален для каждой лунки и команды)
+    best_players = df.sort_values("strokes").groupby(["hole", "team"]).first()["player"].unstack()
+
+    for h, row in match.iterrows():
+        a_val, b_val = row[t1], row[t2]
+        
+        if a_val == 999 or b_val == 999:
+            results.append("—")
+        elif a_val < b_val:
+            a_score += 1
+            # Достаем фамилию игрока из t1, который сделал меньше всех ударов на этой лунке
+            p_name = best_players.loc[h, t1] if h in best_players.index else t1
+            results.append(f"🟢 {p_name} ({t1})") 
+        elif b_val < a_val:
+            b_score += 1
+            # Достаем фамилию игрока из t2
+            p_name = best_players.loc[h, t2] if h in best_players.index else t2
+            results.append(f"🟢 {p_name} ({t2})") 
+        else:
+            results.append("🔵 AS (Ничья)")
+
+    match["Победитель лунки"] = results
 
     # 4. ГЛАВНОЕ ТАБЛО (Счет по лункам и статус матча)
     sc1, sc2, sc3 = st.columns([2, 3, 2])
