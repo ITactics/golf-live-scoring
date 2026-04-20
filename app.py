@@ -261,6 +261,33 @@ if st.session_state.team_list:
             st.dataframe(df[df["team"] == current_t], use_container_width=True)
 
 
+
+# ======================
+# ОБЩАЯ СТРАНИЦА (LEADERBOARD ПО ДНЯМ)
+# ======================
+st.markdown("---")
+st.header("📋 ОБЩАЯ СТРАНИЦА ТУРНИРА")
+
+if not df.empty:
+    # Добавим колонку даты, если её нет (для имитации дней)
+    if 'date' not in df.columns:
+        df['date'] = "1 день" # По умолчанию всё в 1-й день
+
+    # Создаем сводную таблицу: Команды по вертикали, Дни по горизонтали
+    # Считаем сумму очков (points), которые мы сохраняли
+    pivot_df = df.groupby(['team', 'date'])['strokes'].count().unstack().fillna(0)
+    
+    # ВАЖНО: Так как в текущем scores.csv нет очков за дни, 
+    # для этой таблицы нам нужно сохранять финальные баллы за матчи (1, 0.5, 0)
+    
+    # Пока выведем упрощенную версию итогов:
+    summary = df.groupby('team')['hole'].nunique().reset_index() # Пример логики
+    summary.columns = ['КОМАНДА', 'ИТОГО ЛУНОК']
+    
+    st.table(summary.sort_values('ИТОГО ЛУНОК', ascending=False))
+
+
+
 # ======================
 # ДЕМО-РЕЖИМ (Финальная версия с именами)
 # ======================
