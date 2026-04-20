@@ -265,7 +265,7 @@ import random
 import time
 
 st.sidebar.markdown("---")
-if st.sidebar.button("🚀 Запустить реальный матч"):
+if st.sidebar.button("🚀 Запустить симуляцию матча"):
     demo_data = []
     # Реальные игроки для красоты в таблицах
     players = {
