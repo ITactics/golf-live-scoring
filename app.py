@@ -20,20 +20,30 @@ else:
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(135deg, #0b1d13, #000000);
-    color: white;
+    background: url("https://images.unsplash.com/photo-1535131749006-b7f58c99034b");
+    background-size: cover;
+    background-position: center;
 }
+
+/* затемнение слоя */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    z-index: 0;
+}
+
+/* всё поверх */
 .block-container {
-    padding-top: 1rem;
-    padding-bottom: 2rem;
-}
-h1, h2, h3, label, p {
-    color: white !important;
-}
-div[data-testid="stMetric"] {
-    background: rgba(255,255,255,0.08);
-    padding: 10px;
-    border-radius: 12px;
+    position: relative;
+    z-index: 1;
+    background: rgba(0,0,0,0.35);
+    padding: 20px;
+    border-radius: 16px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -71,11 +81,11 @@ col_logo, col_title = st.columns([1, 5])
 
 with col_logo:
     if logo:
-        st.image(logo, width=120)
+        st.image(logo, width=90)
 
 with col_title:
-    st.title("⛳ GOLF LIVE TV SCOREBOARD")
-
+    st.markdown("## ⛳ GOLF LIVE")
+    
 # ======================
 # INPUT
 # ======================
