@@ -1,141 +1,109 @@
 import streamlit as st
 import pandas as pd
-import os
+from sqlalchemy import create_engine
 
-st.set_page_config(page_title="Golf Live Scoreboard", layout="wide")
-
-# ======================
-# DATA STORAGE
-# ======================
-SCORES_FILE = "scores.csv"
-PLAYERS_FILE = "players.csv"
-
-if not os.path.exists(SCORES_FILE):
-    pd.DataFrame(columns=["Team", "Player", "Hole", "Par", "Strokes", "Putts"]).to_csv(SCORES_FILE, index=False)
-
-if not os.path.exists(PLAYERS_FILE):
-    pd.DataFrame(columns=["Player", "Team"]).to_csv(PLAYERS_FILE, index=False)
-
-scores = pd.read_csv(SCORES_FILE)
-players = pd.read_csv(PLAYERS_FILE)
-
-st.title("⛳ PGA Style Live Match Scoreboard")
+st.set_page_config(page_title="Golf TV Scoreboard", layout="wide")
 
 # ======================
-# ADD PLAYER
+# DB
 # ======================
-with st.expander("➕ Add Player"):
-    name = st.text_input("Player Name")
-    team = st.selectbox("Team", ["A", "B"])
+engine = create_engine(st.secrets["DB_URL"])
 
-    if st.button("Add Player"):
-        players.loc[len(players)] = [name, team]
-        players.to_csv(PLAYERS_FILE, index=False)
-        st.success("Player added!")
+def load_data():
+    return pd.read_sql("select * from scores", engine)
 
-# ======================
-# MARKER INPUT
-# ======================
-st.header("📱 Marker Input")
+df = load_data()
 
-if not players.empty:
-
-    player = st.selectbox("Player", players["Player"].tolist())
-    team = players[players["Player"] == player]["Team"].values[0]
-
-    hole = st.selectbox("Hole", list(range(1, 19)))
-    par = st.selectbox("Par", [3, 4, 5])
-
-    strokes = st.number_input("Strokes", 1, 15, 4)
-    putts = st.number_input("Putts", 0, 6, 2)
-
-    if st.button("Save Score"):
-        scores.loc[len(scores)] = [team, player, hole, par, strokes, putts]
-        scores.to_csv(SCORES_FILE, index=False)
-        st.success("Saved!")
+st.title("📺 GOLF LIVE BROADCAST")
 
 # ======================
-# CALCULATIONS
+# TEAMS
 # ======================
-if not scores.empty:
+st.sidebar.header("🏌️ Матч")
 
-    st.markdown("---")
-    st.header("🏆 LIVE MATCH SCOREBOARD")
+team1 = st.sidebar.text_input("Команда 1")
+team2 = st.sidebar.text_input("Команда 2")
 
-    df = scores.copy()
+if team1 == "" or team2 == "":
+    st.warning("Введите команды в боковой панели")
+    st.stop()
 
-    # team best score per hole (match play logic)
-    hole_match = df.groupby(["Hole", "Team"])["Strokes"].min().unstack()
+# ======================
+# MATCH LOGIC
+# ======================
+if not df.empty:
 
-    hole_match = hole_match.dropna()
+    match = df.groupby(["hole", "team"])["strokes"].min().unstack()
+
+    match = match.reindex(columns=[team1, team2]).fillna(999)
 
     results = []
+    a_score = 0
+    b_score = 0
 
-    for _, row in hole_match.iterrows():
-        if row["A"] < row["B"]:
-            results.append(("A", 1))
-        elif row["A"] > row["B"]:
-            results.append(("B", 1))
+    for _, row in match.iterrows():
+
+        a = row.get(team1, 999)
+        b = row.get(team2, 999)
+
+        if a == 999 or b == 999:
+            results.append("⚪")
+            continue
+
+        if a < b:
+            a_score += 1
+            results.append("🟢")
+        elif b < a:
+            b_score += 1
+            results.append("🔴")
         else:
-            results.append(("AS", 0))
-
-    result_df = pd.DataFrame(results, columns=["Winner", "Point"])
-
-    a_points = sum(1 for r in results if r[0] == "A")
-    b_points = sum(1 for r in results if r[0] == "B")
+            results.append("🔵")
 
     # ======================
-    # MATCH STATUS
+    # TV HEADER
     # ======================
-    if a_points > b_points:
-        status = f"🟢 Team A is {a_points - b_points} UP"
-    elif b_points > a_points:
-        status = f"🔴 Team B is {b_points - a_points} UP"
-    else:
-        status = "🔵 ALL SQUARE"
+    st.markdown("## 📺 LIVE MATCH")
 
-    st.subheader(status)
+    col1, col2, col3 = st.columns([2, 2, 2])
 
-    # ======================
-    # SCOREBOARD TABLE
-    # ======================
-    display = hole_match.copy()
-    display["Winner"] = result_df["Winner"].values
+    with col1:
+        st.metric(team1, a_score)
 
-    def color(val):
-        if val == "A":
-            return "background-color: green"
-        elif val == "B":
-            return "background-color: red"
+    with col2:
+        if a_score > b_score:
+            st.markdown(f"<h1 style='text-align:center;color:green;'>🟢 {team1} LEADING</h1>", unsafe_allow_html=True)
+        elif b_score > a_score:
+            st.markdown(f"<h1 style='text-align:center;color:red;'>🔴 {team2} LEADING</h1>", unsafe_allow_html=True)
         else:
-            return "background-color: blue"
+            st.markdown("<h1 style='text-align:center;color:blue;'>🔵 ALL SQUARE</h1>", unsafe_allow_html=True)
+
+    with col3:
+        st.metric(team2, b_score)
+
+    # ======================
+    # HOLE BOARD (TV STYLE)
+    # ======================
+    st.markdown("### 🏌️ Hole by Hole")
+
+    board = match.copy()
+    board["Result"] = results
+
+    def style(val):
+        if val == "🟢":
+            return "background-color: #2ecc71"
+        if val == "🔴":
+            return "background-color: #e74c3c"
+        if val == "🔵":
+            return "background-color: #3498db"
+        return "background-color: #bdc3c7"
 
     st.dataframe(
-        display.style.applymap(color, subset=["Winner"]),
+        board.style.applymap(style, subset=["Result"]),
         use_container_width=True
     )
 
-    # ======================
-    # BIG SCORE CARDS
-    # ======================
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric("Team A", a_points)
-
-    with col2:
-        st.metric("Team B", b_points)
-
-    # ======================
-    # PLAYER STATS
-    # ======================
-    st.markdown("---")
-    st.header("📊 Player Stats")
-
-    stats = df.groupby("Player").agg({
-        "Strokes": "sum",
-        "Putts": "sum",
-        "Hole": "count"
-    }).rename(columns={"Hole": "Holes Played"})
-
-    st.dataframe(stats, use_container_width=True)
+# ======================
+# EMPTY STATE
+# ======================
+else:
+    st.info("Нет данных — добавьте результаты")
