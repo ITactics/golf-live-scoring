@@ -251,8 +251,15 @@ if not df.empty and len(st.session_state.team_list) >= 2:
         st.metric(f"Holes {t2}", b_score)
 
     # 5. ВЫВОД ТАБЛИЦЫ ЛУНОК
-    display_df = match[[t1, t2, "Результат лунки"]].replace(999, "-")
+    column_to_show = "Победитель лунки" 
+    
+    display_df = match[[t1, t2, column_to_show]].replace(999, "-")
+    
+    # Делаем заголовок таблицы красивым
+    display_df.index.name = "№ Лунки"
+    
     st.dataframe(display_df, use_container_width=True)
+
     
 # ======================
 # TEAM VIEW
