@@ -146,7 +146,7 @@ if st.button("💾 Сохранить результат"):
     st.success(f"Данные для {player} ({team}) сохранены!")
 
 # ======================
-# MATCH LOGIC
+# MATCH LOGIC (TV STYLE: PAIR vs PAIR)
 # ======================
 st.markdown(f"## 🏆 LIVE MATCH ({format_type})")
 
@@ -154,111 +154,97 @@ if not df.empty and len(st.session_state.team_list) >= 2:
     t1 = st.session_state.team_list[0]
     t2 = st.session_state.team_list[1]
     
-    # Группируем и сортируем лунки
     match = df.groupby(["hole", "team"])["strokes"].min().unstack()
     for t in [t1, t2]:
         if t not in match.columns: match[t] = 999
     match = match.fillna(999).sort_index()
 
-    # 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 или 6-6-6-18)
+    # --- 1. ЛОГИКА ОТРЕЗКОВ (как была) ---
     if format_type == "9-9-18":
         segments = [("Front 9", range(1, 10)), ("Back 9", range(10, 19)), ("Overall", range(1, 19))]
-    else: # 6-6-6-18
+    else:
         segments = [("1st Six", range(1, 7)), ("2nd Six", range(7, 13)), ("3rd Six", range(13, 19)), ("Overall", range(1, 19))]
 
     seg_results = []
     total_points_t1, total_points_t2 = 0, 0
-
     for name, h_range in segments:
-        # Вот здесь должен быть отступ вправо!
         t1_wins, t2_wins = 0, 0
         for h in h_range:
             if h in match.index:
                 a, b = match.loc[h, t1], match.loc[h, t2]
                 if a < b and a != 999: t1_wins += 1
                 elif b < a and b != 999: t2_wins += 1
-        
-        # ЛОГИКА ЦВЕТОВ: Зеленый — победителю, Красный — проигравшему
         if t1_wins > t2_wins:
-            seg_results.append((name, f"🟢 {t1} / 🔴 {t2}"))
-            total_points_t1 += 1
+            seg_results.append((name, f"🟢 {t1} / 🔴 {t2}")); total_points_t1 += 1
         elif t2_wins > t1_wins:
-            seg_results.append((name, f"🟢 {t2} / 🔴 {t1}"))
-            total_points_t2 += 1
+            seg_results.append((name, f"🟢 {t2} / 🔴 {t1}")); total_points_t2 += 1
         else:
             seg_results.append((name, f"🔵 AS ({t1}={t2})"))
 
-    # 2. ВЫВОД ОЧКОВ ПО ОТРЕЗКАМ (ТВ-СТИЛЬ)
+    # --- 2. ВЫВОД КАРТОЧЕК ОТРЕЗКОВ ---
     cols = st.columns(len(seg_results))
     for i, (name, res) in enumerate(seg_results):
         with cols[i]:
-            st.markdown(f"""
-                <div style="
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 10px;
-                    border-radius: 10px;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    text-align: center;
-                ">
-                    <p style="margin: 0; font-size: 14px; color: #aaa;">{name}</p>
-                    <p style="margin: 0; font-size: 16px; font-weight: bold; white-space: nowrap;">{res}</p>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:10px;text-align:center;"><p style="margin:0;font-size:12px;color:#aaa;">{name}</p><p style="margin:0;font-size:14px;font-weight:bold;">{res}</p></div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True) # Небольшой отступ
+    st.markdown("---")
 
-    # 3. РАСЧЕТ КРУЖОЧКОВ И ПОБЕДИТЕЛЕЙ (С ФАМИЛИЯМИ)
-    a_score, b_score = 0, 0
-    results = []
+    # --- 3. ВИЗУАЛИЗАЦИЯ "КРУЖКИ В РЯД" (КАК НА ФОТО) ---
+    # Получаем фамилии игроков для каждой команды
+    p1 = ", ".join(df[df["team"] == t1]["player"].unique()[:2])
+    p2 = ", ".join(df[df["team"] == t2]["player"].unique()[:2])
 
-    # Создаем вспомогательную таблицу, чтобы найти фамилию игрока с лучшим результатом
-    # (Берем только те строки, где strokes минимален для каждой лунки и команды)
-    best_players = df.sort_values("strokes").groupby(["hole", "team"]).first()["player"].unstack()
+    c_left, c_mid, c_right = st.columns([2, 5, 2])
 
-    for h, row in match.iterrows():
-        a_val, b_val = row[t1], row[t2]
-        
-        if a_val == 999 or b_val == 999:
-            results.append("—")
-        elif a_val < b_val:
-            a_score += 1
-            # Достаем фамилию игрока из t1, который сделал меньше всех ударов на этой лунке
-            p_name = best_players.loc[h, t1] if h in best_players.index else t1
-            results.append(f"🟢 {p_name} ({t1})") 
-        elif b_val < a_val:
-            b_score += 1
-            # Достаем фамилию игрока из t2
-            p_name = best_players.loc[h, t2] if h in best_players.index else t2
-            results.append(f"🟢 {p_name} ({t2})") 
-        else:
-            results.append("🔵 AS (Ничья)")
+    with c_left:
+        st.markdown(f"<h3 style='margin:0;'>{t1}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#00ff88; font-size:18px;'>{p1}</p>", unsafe_allow_html=True)
 
-    match["Победитель лунки"] = results
+    with c_mid:
+        # Генерируем HTML для кружочков (1-9 и 10-18)
+        def draw_circles(h_range):
+            html = '<div style="display:flex; justify-content:center; gap:8px; margin-bottom:10px;">'
+            a_s, b_s = 0, 0
+            for h in h_range:
+                color, text_color = "#444", "#888" # По умолчанию (не сыграно)
+                if h in match.index:
+                    a, b = match.loc[h, t1], match.loc[h, t2]
+                    if a < b and a != 999: color, text_color = "#00ff88", "black"; a_s += 1
+                    elif b < a and b != 999: color, text_color = "#ff4d4d", "white"; b_s += 1
+                    else: color, text_color = "#888", "white" # Ничья
+                html += f'<div style="width:30px; height:30px; background:{color}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:{text_color};">{h}</div>'
+            return html + '</div>', a_s, b_s
 
-    # 4. ГЛАВНОЕ ТАБЛО (Счет по лункам и статус матча)
-    sc1, sc2, sc3 = st.columns([2, 3, 2])
-    with sc1:
-        st.metric(f"Holes {t1}", a_score)
-    with sc2:
-        # Статус на основе ОЧКОВ за сегменты
-        if total_points_t1 > total_points_t2:
-            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} LEADING MATCH</h2>", unsafe_allow_html=True)
-        elif total_points_t2 > total_points_t1:
-            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} LEADING MATCH</h2>", unsafe_allow_html=True)
-        else:
-            st.markdown("<h2 style='text-align:center;color:#4da6ff;'>ALL SQUARE</h2>", unsafe_allow_html=True)
-    with sc3:
-        st.metric(f"Holes {t2}", b_score)
+        # Рисуем две линии лунок
+        line1, a1, b1 = draw_circles(range(1, 10))
+        line2, a2, b2 = draw_circles(range(10, 19))
+        st.markdown(line1, unsafe_allow_html=True)
+        st.markdown(line2, unsafe_allow_html=True)
 
-    # 5. ВЫВОД ТАБЛИЦЫ ЛУНОК
-    column_to_show = "Победитель лунки" 
-    
-    display_df = match[[t1, t2, column_to_show]].replace(999, "-")
-    
-    # Делаем заголовок таблицы красивым
-    display_df.index.name = "№ Лунки"
-    
-    st.dataframe(display_df, use_container_width=True)
+        # Расчет общего статуса UP/DN
+        total_a, total_b = a1+a2, b1+b2
+        diff = total_a - total_b
+        if diff > 0: status_text = f"{diff} UP"
+        elif diff < 0: status_text = f"{abs(diff)} DN"
+        else: status_text = "ALL SQUARE"
+        st.markdown(f"<h2 style='text-align:center; color:#4da6ff;'>{status_text}</h2>", unsafe_allow_html=True)
+
+    with c_right:
+        st.markdown(f"<h3 style='text-align:right; margin:0;'>{t2}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#ff4d4d; font-size:18px; text-align:right;'>{p2}</p>", unsafe_allow_html=True)
+
+    # 4. ПОДРОБНАЯ ТАБЛИЦА (скрытая под спойлер, чтобы не мешать красоте)
+    with st.expander("📊 Посмотреть детальную таблицу ударов"):
+        best_players = df.sort_values("strokes").groupby(["hole", "team"]).first()["player"].unstack()
+        results = []
+        for h, row in match.iterrows():
+            a_val, b_val = row[t1], row[t2]
+            if a_val == 999 or b_val == 999: results.append("—")
+            elif a_val < b_val: results.append(f"🟢 {best_players.loc[h,t1]} ({t1})")
+            elif b_val < a_val: results.append(f"🔴 {best_players.loc[h,t2]} ({t2})")
+            else: results.append("🔵 AS")
+        match["Победитель"] = results
+        st.dataframe(match[[t1, t2, "Победитель"]].replace(999, "-"), use_container_width=True)
 
     
 # ======================
