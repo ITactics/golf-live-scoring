@@ -7,6 +7,13 @@ st.set_page_config(page_title="Golf TV Live", layout="wide")
 FILE = "scores.csv"
 
 # ======================
+# СИСТЕМНАЯ ЛОГИКА (Команды)
+# ======================
+# Инициализируем список команд в памяти, если его еще нет
+if 'team_list' not in st.session_state:
+    st.session_state.team_list = ["Team A", "Team B"]
+
+# ======================
 # DATA
 # ======================
 if os.path.exists(FILE):
@@ -19,63 +26,73 @@ else:
 # ======================
 st.markdown("""
 <style>
-
-/* фон просто изображение */
 .stApp {
     background: url("https://images.unsplash.com/photo-1535131749006-b7f58c99034b");
     background-size: cover;
     background-position: center;
 }
-
-/* основной контейнер = TV панель */
 .block-container {
-    background: rgba(0, 0, 0, 0.65);
-    padding: 20px;
-    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 30px;
+    border-radius: 20px;
     max-width: 1200px;
+    margin-top: 50px;
 }
-
-/* текст */
-h1, h2, h3, label, p {
+h1, h2, h3, label, p, .stMarkdown {
     color: white !important;
 }
-
+/* Сделаем метрики крупнее и белее */
+[data-testid="stMetricValue"] {
+    color: white !important;
+    font-size: 48px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ======================
-# SIDEBAR (DESIGN)
+# SIDEBAR (DESIGN & TEAMS)
 # ======================
-st.sidebar.header("🎨 Дизайн")
+st.sidebar.header("🎨 Дизайн и Настройки")
 
 logo = st.sidebar.file_uploader("Логотип турнира", type=["png", "jpg", "jpeg"])
 bg_url = st.sidebar.text_input("URL фона (опционально)")
-
 format_type = st.sidebar.selectbox("Формат игры", ["9-9-18", "6-6-6-18"])
 
-team1 = st.sidebar.text_input("Команда 1", "Team A")
-team2 = st.sidebar.text_input("Команда 2", "Team B")
+st.sidebar.markdown("---")
+st.sidebar.subheader("👥 Команды")
 
-# background image
+# Добавление новой команды
+new_team = st.sidebar.text_input("Введите название команды")
+if st.sidebar.button("➕ Добавить команду"):
+    if new_team and new_team not in st.session_state.team_list:
+        st.session_state.team_list.append(new_team)
+        st.rerun()
+
+# Отображение текущих команд с возможностью очистки
+if st.sidebar.button("🗑 Очистить список"):
+    st.session_state.team_list = []
+    st.rerun()
+
+# Применение кастомного фона
 if bg_url:
-    st.markdown(f"""
-    <style>
-    .stApp {{
-        background-image: url("{bg_url}");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<style>.stApp {{ background-image: url('{bg_url}'); }}</style>", unsafe_allow_html=True)
 
 # ======================
-# HEADER
+# HEADER (Логотип и Название в одну линию)
 # ======================
-if logo:
-    st.image(logo, width=120)
+header_col1, header_col2 = st.columns([1, 4])
 
-st.title("⛳ GOLF LIVE")    
+with header_col1:
+    if logo:
+        st.image(logo, width=100)
+    else:
+        # Заглушка, если лого нет, чтобы текст не прыгал влево
+        st.markdown("### ⛳")
+
+with header_col2:
+    # Выравниваем текст по вертикали относительно логотипа
+    st.markdown("<h1 style='margin-top: 10px;'>GOLF LIVE</h1>", unsafe_allow_html=True)
+
 # ======================
 # INPUT
 # ======================
@@ -85,7 +102,8 @@ c1, c2 = st.columns(2)
 
 with c1:
     player = st.text_input("Игрок")
-    team = st.selectbox("Команда", [team1, team2])
+    # Используем динамический список из session_state
+    team = st.selectbox("Команда", options=st.session_state.team_list)
     hole = st.selectbox("Лунка", list(range(1, 19)))
 
 with c2:
@@ -93,8 +111,8 @@ with c2:
     strokes = st.number_input("Удары", 1, 15, 4)
     putts = st.number_input("Патты", 0, 6, 2)
 
-if st.button("💾 Сохранить"):
-    new = pd.DataFrame([{
+if st.button("💾 Сохранить результат"):
+    new_data = pd.DataFrame([{
         "team": team,
         "player": player,
         "hole": hole,
@@ -102,89 +120,68 @@ if st.button("💾 Сохранить"):
         "strokes": strokes,
         "putts": putts
     }])
-
-    df = pd.concat([df, new], ignore_index=True)
+    df = pd.concat([df, new_data], ignore_index=True)
     df.to_csv(FILE, index=False)
-    st.success("Сохранено")
+    st.success(f"Данные для {player} сохранены!")
 
 # ======================
-# FILTER FORMAT
-# ======================
-if format_type == "9-9-18":
-    holes_allowed = list(range(1, 19))
-else:
-    holes_allowed = list(range(1, 19))
-
-df = df[df["hole"].isin(holes_allowed)]
-
-# ======================
-# MATCH LOGIC
+# MATCH LOGIC (Улучшенная обработка для N-команд)
 # ======================
 st.markdown("## 🏆 LIVE MATCH")
 
-if not df.empty:
-
+if not df.empty and len(st.session_state.team_list) >= 2:
+    # Для примера логики "Матч" возьмем первые две команды из списка
+    t1, t2 = st.session_state.team_list[0], st.session_state.team_list[1]
+    
     match = df.groupby(["hole", "team"])["strokes"].min().unstack()
-    match = match.reindex(columns=[team1, team2]).fillna(999)
+    # Гарантируем наличие колонок даже если по ним еще нет данных
+    for t in [t1, t2]:
+        if t not in match.columns:
+            match[t] = 999
+            
+    match = match.fillna(999)
 
-    a_score = 0
-    b_score = 0
+    a_score, b_score = 0, 0
     results = []
 
     for _, row in match.iterrows():
-
-        a = row.get(team1, 999)
-        b = row.get(team2, 999)
-
+        a, b = row[t1], row[t2]
         if a == 999 or b == 999:
-            results.append("")
-            continue
-
-        if a < b:
+            results.append("—")
+        elif a < b:
             a_score += 1
-            results.append(f"🟢 {team1}")
+            results.append(f"🟢 {t1}")
         elif b < a:
             b_score += 1
-            results.append(f"🔴 {team2}")
+            results.append(f"🔴 {t2}")
         else:
             results.append("🔵 AS")
 
-    # ======================
-    # SCOREBOARD TV STYLE
-    # ======================
-    col1, col2, col3 = st.columns([2,3,2])
-
-    with col1:
-        st.metric(team1, a_score)
-
-    with col2:
+    # Scoreboard
+    sc1, sc2, sc3 = st.columns([2, 3, 2])
+    with sc1:
+        st.metric(t1, a_score)
+    with sc2:
         if a_score > b_score:
-            st.markdown(f"<h1 style='text-align:center;color:#00ff88;'>🟢 {team1} LEADING</h1>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} UP</h2>", unsafe_allow_html=True)
         elif b_score > a_score:
-            st.markdown(f"<h1 style='text-align:center;color:#ff4d4d;'>🔴 {team2} LEADING</h1>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} UP</h2>", unsafe_allow_html=True)
         else:
-            st.markdown("<h1 style='text-align:center;color:#4da6ff;'>🔵 ALL SQUARE</h1>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align:center;color:#4da6ff;'>ALL SQUARE</h2>", unsafe_allow_html=True)
+    with sc3:
+        st.metric(t2, b_score)
 
-    with col3:
-        st.metric(team2, b_score)
-
-    # ======================
-    # HOLE TABLE
-    # ======================
-    match["Result"] = results + [""] * (len(match) - len(results))
-
-    st.dataframe(match, use_container_width=True)
+    st.dataframe(match[[t1, t2]].replace(999, "-"), use_container_width=True)
 
 # ======================
-# TEAM VIEW (CLICK FEEL)
+# TEAM VIEW
 # ======================
 st.markdown("---")
-st.subheader("🏌️ Команды")
+st.subheader("🏌️ Детальная статистика")
 
-tab1, tab2 = st.tabs([team1, team2])
-
-with tab1:
-    st.dataframe(df[df["team"] == team1])
-
-with tab2:
-    st.dataframe(df[df["team"] == team2])
+if st.session_state.team_list:
+    tabs = st.tabs(st.session_state.team_list)
+    for i, tab in enumerate(tabs):
+        current_t = st.session_state.team_list[i]
+        with tab:
+            st.dataframe(df[df["team"] == current_t], use_container_width=True)
