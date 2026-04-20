@@ -201,7 +201,7 @@ if not df.empty:
     with c_l: st.table(ldf.iloc[:len(ldf)//2 + len(ldf)%2])
     with c_r: st.table(ldf.iloc[len(ldf)//2 + len(ldf)%2:])
 
-        # 2. Карточки матчей (Исправлено: принудительный черный текст и фамилии)
+    # 2. Карточки матчей (ФИНАЛЬНАЯ КОРРЕКЦИЯ ЦВЕТА)
     unique_matches = df.match_id.unique()
     for i in range(0, len(unique_matches), 2):
         row = st.columns(2)
@@ -212,25 +212,30 @@ if not df.empty:
                 t_a_n, t_b_n = curr_m.split("_vs_")
                 s_a, s_b = len(m_data[m_data.result == 1]), len(m_data[m_data.result == 2])
                 
-                # Берем фамилии из последней записи (чтобы было видно, кто играет)
+                # Достаем фамилии
                 p_a_display = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
                 p_b_display = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
 
+                # Получаем Base64 логотипов
+                logo_a_v4 = get_base64_image(f"logo_{t_a_n}.png")
+                logo_b_v4 = get_base64_image(f"logo_{t_b_n}.png")
+
                 with row[j]:
                     st.markdown(f"""
-                    <div style="background:white; padding:15px; border-radius:10px; border-left:10px solid #cc0000; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; box-shadow: 2px 2px 8px rgba(0,0,0,0.2);">
+                    <div class="match-card-container" style="background:white; padding:15px; border-radius:10px; border-left:10px solid #cc0000; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; box-shadow: 2px 2px 8px rgba(0,0,0,0.2);">
                         <div style="text-align:center; width:33%;">
-                            <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="40"><br>
-                            <b style="color: #000000 !important;">{t_a_n}</b><br>
-                            <span style="color: #555555 !important; font-size: 11px;">{p_a_display}</span>
+                            <img src="{logo_a_v4}" width="40"><br>
+                            <b style="font-size: 14px;">{t_a_n}</b><br>
+                            <span style="font-size: 11px; opacity: 0.8;">{p_a_display}</span>
                         </div>
                         <div style="text-align:center; width:34%;">
                             <h1 style="color:#cc0000 !important; margin:0; font-size: 38px; font-weight: bold;">{s_a}:{s_b}</h1>
+                            <div style="font-size: 10px; opacity: 0.6;">LIVE</div>
                         </div>
                         <div style="text-align:center; width:33%;">
-                            <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="40"><br>
-                            <b style="color: #000000 !important;">{t_b_n}</b><br>
-                            <span style="color: #555555 !important; font-size: 11px;">{p_b_display}</span>
+                            <img src="{logo_b_v4}" width="40"><br>
+                            <b style="font-size: 14px;">{t_b_n}</b><br>
+                            <span style="font-size: 11px; opacity: 0.8;">{p_b_display}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
