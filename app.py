@@ -74,6 +74,29 @@ with st.sidebar.expander("🖼 Логотипы команд"):
         st.success("Сохранено!")
         st.rerun()
 
+# ======================
+# МЕНЕДЖЕР ВСЕХ КОМАНД
+# ======================
+st.sidebar.markdown("---")
+with st.sidebar.expander("⚙️ Управление списком команд"):
+    # Поле для ввода новой команды
+    new_team_name = st.text_input("Название новой команды:")
+    if st.button("➕ Добавить в базу"):
+        if new_team_name and new_team_name not in st.session_state.team_list:
+            st.session_state.team_list.append(new_team_name)
+            save_teams(st.session_state.team_list) # Сохраняем в teams_list.txt
+            st.success(f"Команда {new_team_name} добавлена!")
+            st.rerun()
+
+    # Удаление лишних
+    if len(st.session_state.team_list) > 0:
+        team_to_del = st.selectbox("Удалить из базы:", st.session_state.team_list)
+        if st.button("🗑 Удалить команду"):
+            st.session_state.team_list.remove(team_to_del)
+            save_teams(st.session_state.team_list)
+            st.rerun()
+
+
 # 2. Состав текущего матча
 st.sidebar.markdown("---")
 st.sidebar.subheader("👥 Текущий матч")
