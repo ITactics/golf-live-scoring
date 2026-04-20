@@ -64,7 +64,15 @@ h1, h2, h3, label, p, .stMarkdown {
 # ======================
 st.sidebar.header("🎨 Дизайн и Настройки")
 
-logo = st.sidebar.file_uploader("Логотип турнира", type=["png", "jpg", "jpeg"])
+# Загружаем логотип
+uploaded_logo = st.sidebar.file_uploader("Логотип турнира", type=["png", "jpg", "jpeg"])
+
+# Если файл выбран — сохраняем его на диск
+if uploaded_logo is not None:
+    with open("temp_logo.png", "wb") as f:
+        f.write(uploaded_logo.getbuffer())
+    st.rerun()
+
 bg_url = st.sidebar.text_input("URL фона (опционально)")
 format_type = st.sidebar.selectbox("Формат игры", ["9-9-18", "6-6-6-18"])
 
@@ -100,12 +108,14 @@ if bg_url:
 # ======================
 # HEADER (Выравнивание лого)
 # ======================
-header_col1, header_col2 = st.columns([1, 6]) # Подобрал пропорции для красоты
+header_col1, header_col2 = st.columns([1, 6]) 
 
 with header_col1:
-    if logo:
-        st.image(logo, width=100)
+    # Проверяем, был ли ранее сохранен файл логотипа
+    if os.path.exists("temp_logo.png"):
+        st.image("temp_logo.png", width=100)
     else:
+        # Если файла нет, показываем иконку
         st.markdown("<h1 style='margin:0;'>⛳</h1>", unsafe_allow_html=True)
 
 with header_col2:
