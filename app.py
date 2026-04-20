@@ -160,7 +160,7 @@ if not df.empty and len(st.session_state.team_list) >= 2:
         if t not in match.columns: match[t] = 999
     match = match.fillna(999).sort_index()
 
-        # 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 или 6-6-6-18)
+    # 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 или 6-6-6-18)
     if format_type == "9-9-18":
         segments = [("Front 9", range(1, 10)), ("Back 9", range(10, 19)), ("Overall", range(1, 19))]
     else: # 6-6-6-18
