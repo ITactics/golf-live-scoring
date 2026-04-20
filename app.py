@@ -159,21 +159,22 @@ if not df.empty and len(st.session_state.team_list) >= 2:
 
     # Цикл сравнения
     for _, row in match.iterrows():
-    a, b = row[t1], row[t2]
-    
-    if a == 999 or b == 999:
-        results.append("—")
-    elif a < b:
-        a_score += 1
-        # Первая команда (t1) выиграла, вторая (t2) проиграла
-        results.append(f"🟢 {t1} / 🔴 {t2}") 
-    elif b < a:
-        b_score += 1
-        # Вторая команда (t2) выиграла, первая (t1) проиграла
-        results.append(f"🟢 {t2} / 🔴 {t1}") 
-    else:
-        # Ничья
-        results.append(f"🔵 AS ({t1} = {t2})")
+        # ВСЁ, что ниже, должно иметь отступ (4 пробела)
+        a, b = row[t1], row[t2]
+        
+        if a == 999 or b == 999:
+            results.append("—")
+        elif a < b:
+            a_score += 1
+            # Первая команда (t1) выиграла, вторая (t2) проиграла
+            results.append(f"🟢 {t1} / 🔴 {t2}") 
+        elif b < a:
+            b_score += 1
+            # Вторая команда (t2) выиграла, первая (t1) проиграла
+            results.append(f"🟢 {t2} / 🔴 {t1}") 
+        else:
+            # Ничья
+            results.append(f"🔵 AS ({t1} = {t2})")
 
     # !!! ВОТ ЭТА СТРОЧКА ВАЖНА: Добавляем расчеты в таблицу !!!
     match["Результат лунки"] = results
