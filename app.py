@@ -5,13 +5,24 @@ import os
 st.set_page_config(page_title="Golf TV Live", layout="wide")
 
 FILE = "scores.csv"
+TEAMS_FILE = "teams.txt"  # Файл для хранения названий команд
 
 # ======================
 # СИСТЕМНАЯ ЛОГИКА (Команды)
 # ======================
-# Инициализируем список команд в памяти, если его еще нет
+def load_teams():
+    if os.path.exists(TEAMS_FILE):
+        with open(TEAMS_FILE, "r", encoding="utf-8") as f:
+            return [line.strip() for line in f.readlines() if line.strip()]
+    return ["Team A", "Team B"]
+
+def save_teams(teams):
+    with open(TEAMS_FILE, "w", encoding="utf-8") as f:
+        for team in teams:
+            f.write(f"{team}\n")
+
 if 'team_list' not in st.session_state:
-    st.session_state.team_list = ["Team A", "Team B"]
+    st.session_state.team_list = load_teams()
 
 # ======================
 # DATA
@@ -41,7 +52,6 @@ st.markdown("""
 h1, h2, h3, label, p, .stMarkdown {
     color: white !important;
 }
-/* Сделаем метрики крупнее и белее */
 [data-testid="stMetricValue"] {
     color: white !important;
     font-size: 48px;
@@ -59,39 +69,47 @@ bg_url = st.sidebar.text_input("URL фона (опционально)")
 format_type = st.sidebar.selectbox("Формат игры", ["9-9-18", "6-6-6-18"])
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("👥 Команды")
+st.sidebar.subheader("👥 Менеджер команд")
 
-# Добавление новой команды
-new_team = st.sidebar.text_input("Введите название команды")
-if st.sidebar.button("➕ Добавить команду"):
+# 1. Добавление
+new_team = st.sidebar.text_input("Название новой команды")
+if st.sidebar.button("➕ Добавить"):
     if new_team and new_team not in st.session_state.team_list:
         st.session_state.team_list.append(new_team)
+        if 'save_teams' in globals(): save_teams(st.session_state.team_list)
         st.rerun()
 
-# Отображение текущих команд с возможностью очистки
-if st.sidebar.button("🗑 Очистить список"):
-    st.session_state.team_list = []
+# 2. Удаление конкретной команды
+if len(st.session_state.team_list) > 0:
+    team_to_delete = st.sidebar.selectbox("Выбрать команду для удаления", options=st.session_state.team_list)
+    if st.sidebar.button("🗑 Удалить выбранную"):
+        st.session_state.team_list.remove(team_to_delete)
+        if 'save_teams' in globals(): save_teams(st.session_state.team_list)
+        st.rerun()
+
+st.sidebar.markdown("---")
+# Кнопка полной очистки (на всякий случай)
+if st.sidebar.button("⚠️ Сбросить всё к Team A/B"):
+    st.session_state.team_list = ["Team A", "Team B"]
+    if 'save_teams' in globals(): save_teams(st.session_state.team_list)
     st.rerun()
 
-# Применение кастомного фона
 if bg_url:
     st.markdown(f"<style>.stApp {{ background-image: url('{bg_url}'); }}</style>", unsafe_allow_html=True)
 
 # ======================
-# HEADER (Логотип и Название в одну линию)
+# HEADER (Выравнивание лого)
 # ======================
-header_col1, header_col2 = st.columns([1, 4])
+header_col1, header_col2 = st.columns([1, 6]) # Подобрал пропорции для красоты
 
 with header_col1:
     if logo:
         st.image(logo, width=100)
     else:
-        # Заглушка, если лого нет, чтобы текст не прыгал влево
-        st.markdown("### ⛳")
+        st.markdown("<h1 style='margin:0;'>⛳</h1>", unsafe_allow_html=True)
 
 with header_col2:
-    # Выравниваем текст по вертикали относительно логотипа
-    st.markdown("<h1 style='margin-top: 10px;'>GOLF LIVE</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin-top: 15px; margin-left: -20px;'>GOLF LIVE</h1>", unsafe_allow_html=True)
 
 # ======================
 # INPUT
@@ -102,7 +120,7 @@ c1, c2 = st.columns(2)
 
 with c1:
     player = st.text_input("Игрок")
-    # Используем динамический список из session_state
+    # Список команд теперь всегда актуален
     team = st.selectbox("Команда", options=st.session_state.team_list)
     hole = st.selectbox("Лунка", list(range(1, 19)))
 
@@ -112,29 +130,22 @@ with c2:
     putts = st.number_input("Патты", 0, 6, 2)
 
 if st.button("💾 Сохранить результат"):
-    new_data = pd.DataFrame([{
-        "team": team,
-        "player": player,
-        "hole": hole,
-        "par": par,
-        "strokes": strokes,
-        "putts": putts
-    }])
+    new_data = pd.DataFrame([{"team": team, "player": player, "hole": hole, "par": par, "strokes": strokes, "putts": putts}])
     df = pd.concat([df, new_data], ignore_index=True)
     df.to_csv(FILE, index=False)
-    st.success(f"Данные для {player} сохранены!")
+    st.success(f"Данные для {player} ({team}) сохранены!")
 
 # ======================
-# MATCH LOGIC (Улучшенная обработка для N-команд)
+# MATCH LOGIC
 # ======================
 st.markdown("## 🏆 LIVE MATCH")
 
 if not df.empty and len(st.session_state.team_list) >= 2:
-    # Для примера логики "Матч" возьмем первые две команды из списка
-    t1, t2 = st.session_state.team_list[0], st.session_state.team_list[1]
+    # Берем первые две команды из актуального списка
+    t1 = st.session_state.team_list[0]
+    t2 = st.session_state.team_list[1]
     
     match = df.groupby(["hole", "team"])["strokes"].min().unstack()
-    # Гарантируем наличие колонок даже если по ним еще нет данных
     for t in [t1, t2]:
         if t not in match.columns:
             match[t] = 999
@@ -157,15 +168,14 @@ if not df.empty and len(st.session_state.team_list) >= 2:
         else:
             results.append("🔵 AS")
 
-    # Scoreboard
     sc1, sc2, sc3 = st.columns([2, 3, 2])
     with sc1:
         st.metric(t1, a_score)
     with sc2:
         if a_score > b_score:
-            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} UP</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} LEADING</h2>", unsafe_allow_html=True)
         elif b_score > a_score:
-            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} UP</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} LEADING</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='text-align:center;color:#4da6ff;'>ALL SQUARE</h2>", unsafe_allow_html=True)
     with sc3:
