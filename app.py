@@ -160,7 +160,7 @@ if not df.empty and len(st.session_state.team_list) >= 2:
         if t not in match.columns: match[t] = 999
     match = match.fillna(999).sort_index()
 
-    # 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 или 6-6-6-18)
+        # 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 или 6-6-6-18)
     if format_type == "9-9-18":
         segments = [("Front 9", range(1, 10)), ("Back 9", range(10, 19)), ("Overall", range(1, 19))]
     else: # 6-6-6-18
@@ -170,6 +170,7 @@ if not df.empty and len(st.session_state.team_list) >= 2:
     total_points_t1, total_points_t2 = 0, 0
 
     for name, h_range in segments:
+        # Вот здесь должен быть отступ вправо!
         t1_wins, t2_wins = 0, 0
         for h in h_range:
             if h in match.index:
@@ -177,14 +178,15 @@ if not df.empty and len(st.session_state.team_list) >= 2:
                 if a < b and a != 999: t1_wins += 1
                 elif b < a and b != 999: t2_wins += 1
         
+        # ЛОГИКА ЦВЕТОВ: Зеленый — победителю, Красный — проигравшему
         if t1_wins > t2_wins:
-            seg_results.append((name, f"🟢 {t1}"))
+            seg_results.append((name, f"🟢 {t1} / 🔴 {t2}"))
             total_points_t1 += 1
         elif t2_wins > t1_wins:
-            seg_results.append((name, f"🔴 {t2}"))
+            seg_results.append((name, f"🟢 {t2} / 🔴 {t1}"))
             total_points_t2 += 1
         else:
-            seg_results.append((name, "🔵 AS"))
+            seg_results.append((name, f"🔵 AS ({t1}={t2})"))
 
     # 2. ВЫВОД ОЧКОВ ПО ОТРЕЗКАМ (Верхний ряд)
     cols = st.columns(len(seg_results))
@@ -229,6 +231,7 @@ if not df.empty and len(st.session_state.team_list) >= 2:
     # 5. ВЫВОД ТАБЛИЦЫ ЛУНОК
     display_df = match[[t1, t2, "Результат лунки"]].replace(999, "-")
     st.dataframe(display_df, use_container_width=True)
+    
 # ======================
 # TEAM VIEW
 # ======================
