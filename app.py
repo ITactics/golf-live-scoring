@@ -224,27 +224,41 @@ if st.session_state.team_list:
 
 
 # ======================
-# ДЕМО-РЕЖИМ (Добавьте в конец файла)
+# ДЕМО-РЕЖИМ (Полный матч на 18 лунок)
 # ======================
-st.sidebar.markdown("---")
-if st.sidebar.button("🚀 Запустить демо-матч"):
-    # Создаем тестовые данные
-    demo_data = [
-        {"team": "BMW", "player": "Иван", "hole": 1, "par": 4, "strokes": 4, "putts": 2},
-        {"team": "Audi", "player": "Петр", "hole": 1, "par": 4, "strokes": 5, "putts": 3},
-        {"team": "BMW", "player": "Иван", "hole": 2, "par": 3, "strokes": 3, "putts": 1},
-        {"team": "Audi", "player": "Петр", "hole": 2, "par": 3, "strokes": 3, "putts": 2},
-        {"team": "BMW", "player": "Иван", "hole": 3, "par": 5, "strokes": 6, "putts": 2},
-        {"team": "Audi", "player": "Петр", "hole": 3, "par": 5, "strokes": 4, "putts": 1},
-    ]
-    
-    # Убеждаемся, что эти команды есть в списке
-    st.session_state.team_list = ["BMW", "Audi"]
-    save_teams(st.session_state.team_list)
-    
-    # Сохраняем в CSV
-    demo_df = pd.DataFrame(demo_data)
-    demo_df.to_csv(FILE, index=False)
-    
-    st.rerun()
+import random # Добавляем для генерации случайных ударов
 
+st.sidebar.markdown("---")
+if st.sidebar.button("🚀 Запустить полный матч (18 лунок)"):
+    demo_data = []
+    teams = ["BMW", "Audi"]
+    
+    # Генерируем данные для каждой из 18 лунок
+    for h in range(1, 19):
+        # Случайный ПАР для лунки (3, 4 или 5)
+        current_par = random.choice([3, 4, 5])
+        
+        for t in teams:
+            # Имитируем реальную игру: Пар +/- 2 удара
+            random_strokes = current_par + random.randint(-1, 2)
+            random_putts = random.randint(1, 3)
+            
+            demo_data.append({
+                "team": t, 
+                "player": "Pro Player", 
+                "hole": h, 
+                "par": current_par, 
+                "strokes": random_strokes, 
+                "putts": random_putts
+            })
+    
+    # Обновляем список команд, чтобы они точно были в системе
+    st.session_state.team_list = teams
+    if 'save_teams' in globals():
+        save_teams(teams)
+    
+    # Сохраняем всё в файл scores.csv
+    pd.DataFrame(demo_data).to_csv(FILE, index=False)
+    
+    st.success("Матч на 18 лунок сгенерирован!")
+    st.rerun()
