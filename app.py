@@ -211,11 +211,12 @@ if not df.empty and len(st.session_state.team_list) >= 2:
 
     match["Результат лунки"] = results
 
-    # 4. ГЛАВНОЕ ТАБЛО (Счет по лункам)
+    # 4. ГЛАВНОЕ ТАБЛО (Счет по лункам и статус матча)
     sc1, sc2, sc3 = st.columns([2, 3, 2])
     with sc1:
         st.metric(f"Holes {t1}", a_score)
     with sc2:
+        # Статус на основе ОЧКОВ за сегменты
         if total_points_t1 > total_points_t2:
             st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} LEADING MATCH</h2>", unsafe_allow_html=True)
         elif total_points_t2 > total_points_t1:
@@ -225,30 +226,9 @@ if not df.empty and len(st.session_state.team_list) >= 2:
     with sc3:
         st.metric(f"Holes {t2}", b_score)
 
-    # 5. ВЫВОД ТАБЛИЦЫ
+    # 5. ВЫВОД ТАБЛИЦЫ ЛУНОК
     display_df = match[[t1, t2, "Результат лунки"]].replace(999, "-")
     st.dataframe(display_df, use_container_width=True)
-
-    # Scoreboard (Метрики)
-    sc1, sc2, sc3 = st.columns([2, 3, 2])
-    with sc1:
-        st.metric(t1, a_score)
-    with sc2:
-        if a_score > b_score:
-            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} {a_score-b_score} UP</h2>", unsafe_allow_html=True)
-        elif b_score > a_score:
-            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} {b_score-a_score} UP</h2>", unsafe_allow_html=True)
-        else:
-            st.markdown("<h2 style='text-align:center;color:#4da6ff;'>ALL SQUARE</h2>", unsafe_allow_html=True)
-    with sc3:
-        st.metric(t2, b_score)
-
-    # Выводим финальную таблицу с новой колонкой
-    # Показываем только нужные колонки и заменяем технические 999 на прочерк
-    display_df = match[[t1, t2, "Результат лунки"]].replace(999, "-")
-    st.dataframe(display_df, use_container_width=True)
-
-
 # ======================
 # TEAM VIEW
 # ======================
