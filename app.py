@@ -2,412 +2,207 @@ import streamlit as st
 import pandas as pd
 import os
 import time
+import base64
+import random
 
+# ======================
+# СИСТЕМНЫЕ НАСТРОЙКИ
+# ======================
 st.set_page_config(page_title="Golf TV Live", layout="wide")
 
-FILE = "scores.csv"
-TEAMS_FILE = "teams.txt"  # Файл для хранения названий команд
+FILE = "tournament_results.csv"
+TEAMS_FILE = "teams_list.txt"
 
-# ======================
-# СИСТЕМНАЯ ЛОГИКА (Команды)
-# ======================
+# Функция для превращения картинок в HTML-код (чтобы лого не слетали)
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return "data:image/png;base64," + base64.b64encode(img_file.read()).decode()
+    return "https://flaticon.com"
+
+# Загрузка списка команд
 def load_teams():
     if os.path.exists(TEAMS_FILE):
         with open(TEAMS_FILE, "r", encoding="utf-8") as f:
             return [line.strip() for line in f.readlines() if line.strip()]
-    return ["Team A", "Team B"]
+    return ["Gorki", "Strawberry", "МГГК", "Целеево", "Forest"]
 
 def save_teams(teams):
     with open(TEAMS_FILE, "w", encoding="utf-8") as f:
-        for team in teams:
-            f.write(f"{team}\n")
+        for team in teams: f.write(f"{team}\n")
 
 if 'team_list' not in st.session_state:
     st.session_state.team_list = load_teams()
 
-# ======================
-# DATA (ОБНОВЛЕННЫЙ)
-# ======================
+# Инициализация базы данных
 if os.path.exists(FILE):
     df = pd.read_csv(FILE)
 else:
-    # Создаем пустой файл с НОВЫМИ колонками, которые нужны для кнопок
     df = pd.DataFrame(columns=["match_id", "hole", "result", "pair_a", "pair_b"])
     df.to_csv(FILE, index=False)
 
 # ======================
-# STYLE (TV LOOK)
+# STYLE (ТВ-ДИЗАЙН)
 # ======================
 st.markdown("""
 <style>
 .stApp {
-    background: url("https://images.unsplash.com/photo-1535131749006-b7f58c99034b");
+    background: url("https://unsplash.com");
     background-size: cover;
-    background-position: center;
 }
 .block-container {
     background: rgba(0, 0, 0, 0.75);
     padding: 30px;
     border-radius: 20px;
-    max-width: 1200px;
-    margin-top: 50px;
 }
-h1, h2, h3, label, p, .stMarkdown {
-    color: white !important;
-}
-[data-testid="stMetricValue"] {
-    color: white !important;
-    font-size: 48px;
-}
+h1, h2, h3, p, label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ======================
-# SIDEBAR (ОБНОВЛЕННЫЙ ПО ТЗ)
+# SIDEBAR (МЕНЕДЖЕР)
 # ======================
-st.sidebar.header("🎨 Дизайн и Настройки")
+st.sidebar.header("🎨 Настройки турнира")
 
-# 1. Логотип и фон (твоя логика сохранена)
-uploaded_logo = st.sidebar.file_uploader("Логотип турнира", type=["png", "jpg", "jpeg"])
-if uploaded_logo is not None:
-    with open("temp_logo.png", "wb") as f:
-        f.write(uploaded_logo.getbuffer())
+# 1. Загрузка логотипов команд
+with st.sidebar.expander("🖼 Логотипы команд"):
+    target_t = st.selectbox("Команда:", st.session_state.team_list)
+    t_logo = st.file_uploader(f"Загрузить лого для {target_t}", type=["png", "jpg"])
+    if t_logo:
+        with open(f"logo_{target_t}.png", "wb") as f:
+            f.write(t_logo.getbuffer())
+        st.success("Сохранено!")
+        st.rerun()
+
+# 2. Состав текущего матча
+st.sidebar.markdown("---")
+st.sidebar.subheader("👥 Текущий матч")
+col_sa, col_sb = st.sidebar.columns(2)
+with col_sa:
+    team_a = st.selectbox("Команда А", st.session_state.team_list, key="ta")
+    p_a = st.text_input("Пара А (ФИО)", "Иванов/Петров")
+with col_sb:
+    team_b = st.selectbox("Команда Б", st.session_state.team_list, index=1, key="tb")
+    p_b = st.text_input("Пара Б (ФИО)", "Сидоров/Борисов")
+
+format_type = st.sidebar.selectbox("Формат", ["9-9-18", "6-6-6-18"])
+
+if st.sidebar.button("🗑 Сбросить ВСЕ данные"):
+    if os.path.exists(FILE): os.remove(FILE)
     st.rerun()
 
 # ======================
-# ЗАГРУЗКА ЛОГОТИПОВ
+# СТРАНИЦА МАРКЕРА
 # ======================
-with st.sidebar.expander("🖼 Загрузить логотипы команд"):
-    if st.session_state.team_list:
-        # 1. Выбираем команду
-        target_team = st.selectbox("Для какой команды?", st.session_state.team_list, key="select_team_logo")
-        
-        # 2. Показываем текущий логотип, если он уже есть
-        logo_path = f"logo_{target_team}.png"
-        if os.path.exists(logo_path):
-            st.image(logo_path, width=50, caption="Текущий логотип")
-        
-        # 3. Загружаем новый (добавили уникальный key, зависящий от команды)
-        team_logo = st.file_uploader(f"Новое лого для {target_team}", type=["png", "jpg"], key=f"uploader_{target_team}")
-        
-        if team_logo:
-            # Сохраняем физически на диск
-            with open(logo_path, "wb") as f:
-                f.write(team_logo.getbuffer())
-            st.success(f"Логотип для {target_team} успешно сохранен!")
-            # Небольшая задержка и перезапуск, чтобы очистить загрузчик и обновить картинку
-            time.sleep(1)
-            st.rerun()
+st.header("📱 Ввод результатов (Маркер)")
+hole = st.selectbox("Выберите лунку:", list(range(1, 19)))
 
+c1, c2, c3 = st.columns(3)
+match_id = f"{team_a}_vs_{team_b}"
 
-bg_url = st.sidebar.text_input("URL фона (опционально)")
-if bg_url:
-    st.markdown(f"<style>.stApp {{ background-image: url('{bg_url}'); }}</style>", unsafe_allow_html=True)
-
-# 2. ВЫБОР ВАРИАНТА ТУРНИРА (из нового ТЗ)
-st.sidebar.markdown("---")
-tour_variant = st.sidebar.radio(
-    "Вариант турнира:",
-    ["Вариант 1 (Красные vs Синие)", "Вариант 2 (14-16 команд)"]
-)
-format_type = st.sidebar.selectbox("Формат игры", ["9-9-18", "6-6-6-18"])
-
-# 3. СОСТАВ ТЕКУЩЕГО МАТЧА (для Маркера)
-st.sidebar.markdown("---")
-st.sidebar.subheader("👥 Состав текущего матча")
-
-col_a, col_b = st.sidebar.columns(2)
-with col_a:
-    st.write("**ПАРА А**")
-    # Если Вариант 1 — выбор из "Красные/Синие", если Вариант 2 — из твоего списка команд
-    list_for_a = ["Красные", "Синие"] if "Вариант 1" in tour_variant else st.session_state.team_list
-    team_a = st.selectbox("Команда А", list_for_a, key="t_a")
-    p_a1 = st.text_input("Игрок 1", "Слесарев", key="p_a1")
-    p_a2 = st.text_input("Игрок 2", "Иванов", key="p_a2")
-
-with col_b:
-    st.write("**ПАРА Б**")
-    list_for_b = ["Красные", "Синие"] if "Вариант 1" in tour_variant else st.session_state.team_list
-    team_b = st.selectbox("Команда Б", list_for_b, index=1 if len(list_for_b)>1 else 0, key="t_b")
-    p_b1 = st.text_input("Игрок 1", "Петров", key="p_b1")
-    p_b2 = st.text_input("Игрок 2", "Сидоров", key="p_b2")
-
-# 4. Твой старый Менеджер команд (скрыт в раскрывашку, чтобы не мешать маркеру)
-with st.sidebar.expander("⚙️ Управление общим списком команд"):
-    new_team = st.text_input("Название новой команды")
-    if st.button("➕ Добавить"):
-        if new_team and new_team not in st.session_state.team_list:
-            st.session_state.team_list.append(new_team)
-            save_teams(st.session_state.team_list)
-            st.rerun()
-    
-    if len(st.session_state.team_list) > 0:
-        team_to_delete = st.selectbox("Удалить команду", options=st.session_state.team_list)
-        if st.button("🗑 Удалить"):
-            st.session_state.team_list.remove(team_to_delete)
-            save_teams(st.session_state.team_list)
-            st.rerun()
-
-# ======================
-# HEADER (Логотип и Название)
-# ======================
-header_col1, header_col2 = st.columns([1, 6]) 
-
-with header_col1:
-    if os.path.exists("temp_logo.png"):
-        st.image("temp_logo.png", width=100)
-    else:
-        st.markdown("<h1 style='margin:0;'>⛳</h1>", unsafe_allow_html=True)
-
-with header_col2:
-    st.markdown("<h1 style='margin-top: 15px; margin-left: -20px;'>GOLF LIVE</h1>", unsafe_allow_html=True)
-
-# ======================
-# СТРАНИЦА МАРКЕРА (ОБНОВЛЕННЫЙ ВВОД ПО ТЗ)
-# ======================
-st.markdown("---")
-st.header("📱 Страница Маркера")
-
-# Сетка лунок
-hole_to_edit = st.selectbox("Выберите лунку для записи результата:", list(range(1, 19)))
-
-st.write(f"Результат лунки №{hole_to_edit} для матча: **{team_a}** vs **{team_b}**")
-
-# Три кнопки как на рисунке в ТЗ
-col_btn1, col_btn2, col_btn3 = st.columns(3)
-
-# Функция для сохранения результата
-def save_winner(winner_val):
+def save(val):
     global df
-    # winner_val: 1 (Победа А), 0 (Ничья), 2 (Победа Б)
-    new_entry = pd.DataFrame([{
-        "match_id": f"{team_a}_vs_{team_b}", 
-        "hole": hole_to_edit, 
-        "result": winner_val,
-        "pair_a": f"{p_a1}/{p_a2}",
-        "pair_b": f"{p_b1}/{p_b2}"
-    }])
-    # Удаляем старую запись этой лунки для этого матча, если она была, и добавляем новую
-    mask = (df['match_id'] == f"{team_a}_vs_{team_b}") & (df['hole'] == hole_to_edit)
-    df = pd.concat([df[~mask], new_entry]).sort_values("hole")
+    new_data = pd.DataFrame([{"match_id": match_id, "hole": hole, "result": val, "pair_a": p_a, "pair_b": p_b}])
+    mask = (df.match_id == match_id) & (df.hole == hole)
+    df = pd.concat([df[~mask], new_data]).sort_values("hole")
     df.to_csv(FILE, index=False)
-    st.toast(f"Лунка {hole_to_edit} сохранена!", icon="✅")
+    st.toast(f"Лунка {hole} записана!")
     time.sleep(0.5)
     st.rerun()
 
-with col_btn1:
-    if st.button(f"🏆 ВЫИГРЫШ {team_a}", use_container_width=True):
-        save_winner(1)
-
-with col_btn2:
-    if st.button("🤝 НИЧЬЯ", use_container_width=True):
-        save_winner(0)
-
-with col_btn3:
-    if st.button(f"🏆 ВЫИГРЫШ {team_b}", use_container_width=True):
-        save_winner(2)
+with c1: 
+    if st.button(f"🏆 {team_a}", use_container_width=True): save(1)
+with c2: 
+    if st.button("🤝 НИЧЬЯ", use_container_width=True): save(0)
+with c3: 
+    if st.button(f"🏆 {team_b}", use_container_width=True): save(2)
 
 # ======================
-# MATCH LOGIC (ОБНОВЛЕН ПОД ТЗ: КРУЖКИ И ФАМИЛИИ)
-# ======================
-st.markdown(f"## 🏆 LIVE MATCH: {team_a} vs {team_b}")
-
-# Фильтруем данные только для текущего матча
-current_match_id = f"{team_a}_vs_{team_b}"
-m_df = df[df["match_id"] == current_match_id]
-
-if not m_df.empty:
-    # --- 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 / 6-6-6-18) ---
-    if format_type == "9-9-18":
-        segments = [("Front 9", range(1, 10)), ("Back 9", range(10, 19)), ("Overall", range(1, 19))]
-    else:
-        segments = [("1st Six", range(1, 7)), ("2nd Six", range(7, 13)), ("3rd Six", range(13, 19)), ("Overall", range(1, 19))]
-
-    seg_results = []
-    total_points_a, total_points_b = 0, 0
-
-    for name, h_range in segments:
-        a_wins = len(m_df[(m_df["hole"].isin(h_range)) & (m_df["result"] == 1)])
-        b_wins = len(m_df[(m_df["hole"].isin(h_range)) & (m_df["result"] == 2)])
-        
-        if a_wins > b_wins:
-            seg_results.append((name, f"🟢 {team_a} / 🔴 {team_b}"))
-            total_points_a += 1
-        elif b_wins > a_wins:
-            seg_results.append((name, f"🟢 {team_b} / 🔴 {team_a}"))
-            total_points_b += 1
-        else:
-            seg_results.append((name, f"🔵 AS"))
-
-    # Вывод карточек отрезков (ТВ-стиль)
-    cols = st.columns(len(seg_results))
-    for i, (name, res) in enumerate(seg_results):
-        with cols[i]:
-            st.markdown(f'<div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:10px;text-align:center;"><p style="margin:0;font-size:12px;color:#aaa;">{name}</p><p style="margin:0;font-size:14px;font-weight:bold;">{res}</p></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # --- 2. ВИЗУАЛИЗАЦИЯ "КРУЖКИ В РЯД" (ПО ТВОЕМУ РИСУНКУ) ---
-    c_left, c_mid, c_right = st.columns([2, 5, 2])
-
-    with c_left:
-        st.markdown(f"<h3 style='margin:0;'>{team_a}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#00ff88; font-size:20px; font-weight:bold;'>{p_a1}<br>{p_a2}</p>", unsafe_allow_html=True)
-
-    with c_right:
-        st.markdown(f"<div style='text-align:right;'><h3 style='margin:0;'>{team_b}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#ff4d4d; font-size:20px; font-weight:bold; text-align:right;'>{p_b1}<br>{p_b2}</p></div>", unsafe_allow_html=True)
-
-    with c_mid:
-        def draw_circles_row(h_range):
-            html = '<div style="display:flex; justify-content:center; gap:8px; margin-bottom:10px;">'
-            for h in h_range:
-                res = m_df[m_df["hole"] == h]["result"].values
-                color, text_c = "#444", "#888" # Не сыграно
-                if len(res) > 0:
-                    if res[0] == 1: color, text_c = "#00ff88", "black"
-                    elif res[0] == 2: color, text_c = "#ff4d4d", "white"
-                    else: color, text_c = "#888", "white" # Ничья
-                html += f'<div style="width:32px; height:32px; background:{color}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; color:{text_c}; border:1px solid white;">{h}</div>'
-            return html + '</div>'
-
-        st.markdown(draw_circles_row(range(1, 10)), unsafe_allow_html=True)
-        st.markdown(draw_circles_row(range(10, 19)), unsafe_allow_html=True)
-
-        # Счет матча
-        total_a = len(m_df[m_df["result"] == 1])
-        total_b = len(m_df[m_df["result"] == 2])
-        diff = total_a - total_b
-        
-        if diff > 0: status_text = f"{diff} UP"
-        elif diff < 0: status_text = f"{abs(diff)} DN"
-        else: status_text = "ALL SQUARE"
-        
-        st.markdown(f"<h1 style='text-align:center; font-size:60px; margin:0;'>{total_a} : {total_b}</h1>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align:center; color:#4da6ff; font-weight:bold; font-size:20px;'>{status_text}</p>", unsafe_allow_html=True)
-        
-        if len(m_df) == 18:
-            st.markdown("<p style='text-align:center; color:#FFD700; font-weight:bold;'>МАТЧ ЗАВЕРШЕН</p>", unsafe_allow_html=True)
-else:
-    st.info("Ожидание данных от маркера...")
-
-    
-# ======================
-# ТАБЛИЦА ВСЕХ МАТЧЕЙ (ДЕТАЛЬНО)
+# СТРАНИЦА ПАРЫ (ВИЗУАЛ)
 # ======================
 st.markdown("---")
-with st.expander("📊 Посмотреть все записи (Лог матча)"):
-    if not df.empty:
-        # Показываем таблицу, заменяя цифры 1, 0, 2 на понятные слова
-        display_log = df.copy()
-        display_log['Результат'] = display_log['result'].map({1: "Победа А", 0: "Ничья", 2: "Победа Б"})
-        st.dataframe(display_log[["match_id", "hole", "Результат"]], use_container_width=True)
-    else:
-        st.write("Записей пока нет")
+m_df = df[df.match_id == match_id]
+
+if not m_df.empty:
+    l_col, m_col, r_col = st.columns([2, 5, 2])
+    
+    with l_col:
+        st.image(get_base64_image(f"logo_{team_a}.png"), width=80)
+        st.subheader(team_a)
+        st.write(p_a)
+    
+    with r_col:
+        st.markdown(f"<div style='text-align:right;'><img src='{get_base64_image(f'logo_{team_b}.png')}' width='80'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:right;'><h3>{team_b}</h3><p>{p_b}</p></div>", unsafe_allow_html=True)
+
+    with m_col:
+        def draw_row(h_range):
+            row_html = '<div style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">'
+            for h in h_range:
+                res = m_df[m_df.hole == h].result.values
+                bg = "#444"
+                if len(res) > 0:
+                    bg = "#00ff88" if res[0] == 1 else "#ff4d4d" if res[0] == 2 else "#888"
+                row_html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:10px;">{h}</div>'
+            return row_html + '</div>'
+        
+        st.markdown(draw_row(range(1, 10)), unsafe_allow_html=True)
+        st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
+        
+        a_w = len(m_df[m_df.result == 1])
+        b_w = len(m_df[m_df.result == 2])
+        st.markdown(f"<h1 style='text-align:center; font-size:60px;'>{a_w} : {b_w}</h1>", unsafe_allow_html=True)
 
 # ======================
-# ОБЩАЯ СТРАНИЦА ТУРНИРА (КАК НА ФОТО)
+# ОБЩАЯ СТРАНИЦА (КАК НА ФОТО)
 # ======================
 st.markdown("---")
 st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
-    # 1. ТАБЛИЦА РЕЙТИНГА (Верхняя часть фото)
-    # Считаем сумму выигранных лунок для каждой команды из списка
+    # 1. Таблица рейтинга
     stats = []
     for t in st.session_state.team_list:
-        wins_a = len(df[(df.match_id.str.startswith(t)) & (df.result == 1)])
-        wins_b = len(df[(df.match_id.str.endswith(t)) & (df.result == 2)])
-        total = wins_a + wins_b
-        stats.append({"Команда": t, "Очки": float(total)})
+        p = len(df[(df.match_id.str.startswith(t)) & (df.result == 1)]) + len(df[(df.match_id.str.endswith(t)) & (df.result == 2)])
+        stats.append({"Команда": t, "Очки": float(p)})
     
     ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
-    
-    # Вывод таблицы в две колонки для компактности
-    lt1, lt2 = st.columns(2)
-    half = len(ldf) // 2 + len(ldf) % 2
-    with lt1: st.table(ldf.iloc[:half])
-    with lt2: st.table(ldf.iloc[half:])
+    c_l, c_r = st.columns(2)
+    with c_l: st.table(ldf.iloc[:len(ldf)//2 + len(ldf)%2])
+    with c_r: st.table(ldf.iloc[len(ldf)//2 + len(ldf)%2:])
 
-    st.markdown("---")
-
-    # 2. СЕТКА КАРТОЧЕК МАТЧЕЙ (Нижняя часть фото)
-    unique_matches = df['match_id'].unique()
-    
-    # Рисуем по 2 карточки в ряд
+    # 2. Карточки матчей
+    unique_matches = df.match_id.unique()
     for i in range(0, len(unique_matches), 2):
-        row_cols = st.columns(2)
+        row = st.columns(2)
         for j in range(2):
             if i + j < len(unique_matches):
-                m_id = unique_matches[i+j]
-                t_a, t_b = m_id.split("_vs_")
-                m_data = df[df.match_id == m_id]
+                curr_m = unique_matches[i+j]
+                m_data = df[df.match_id == curr_m]
+                t_a_n, t_b_n = curr_m.split("_vs_")
+                s_a, s_b = len(m_data[m_data.result == 1]), len(m_data[m_data.result == 2])
                 
-                # Текущий счет и фамилии
-                score_a = len(m_data[m_data.result == 1])
-                score_b = len(m_data[m_data.result == 2])
-                last_row = m_data.iloc[-1]
-                
-                with row_cols[j]:
-                    # Формируем карточку в стиле ТЗ
+                with row[j]:
                     st.markdown(f"""
-                    <div style="background-color: white; padding: 15px; border-radius: 10px; border-left: 10px solid #cc0000; margin-bottom: 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; color: black;">
-                            <div style="text-align: center; width: 30%;">
-                                <img src="logo_{t_a}.png" width="45" onerror="this.src='https://flaticon.com'">
-                                <p style="font-size: 13px; font-weight: bold; margin: 5px 0;">{t_a}</p>
-                                <p style="font-size: 11px; color: #666; margin: 0;">{last_row['pair_a']}</p>
-                            </div>
-                            <div style="text-align: center; width: 40%;">
-                                <h1 style="color: #cc0000; margin: 0; font-size: 40px;">{score_a}:{score_b}</h1>
-                                <p style="font-size: 10px; color: #999; margin: 0;">Матч в процессе</p>
-                            </div>
-                            <div style="text-align: center; width: 30%;">
-                                <img src="logo_{t_b}.png" width="45" onerror="this.src='https://flaticon.com'">
-                                <p style="font-size: 13px; font-weight: bold; margin: 5px 0;">{t_b}</p>
-                                <p style="font-size: 11px; color: #666; margin: 0;">{last_row['pair_b']}</p>
-                            </div>
+                    <div style="background:white; padding:15px; border-radius:10px; border-left:10px solid #cc0000; display:flex; justify-content:space-between; align-items:center; color:black; margin-bottom:15px;">
+                        <div style="text-align:center; width:30%;">
+                            <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="40"><br><b>{t_a_n}</b>
+                        </div>
+                        <div style="text-align:center; width:40%;">
+                            <h1 style="color:#cc0000; margin:0;">{s_a}:{s_b}</h1>
+                        </div>
+                        <div style="text-align:center; width:30%;">
+                            <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="40"><br><b>{t_b_n}</b>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-else:
-    st.info("Здесь появятся общая таблица и карточки матчей, когда маркер введет первые данные.")
 
-# ======================
-# ДЕМО-РЕЖИМ (Много матчей для Общей страницы)
-# ======================
-import random
-import time
-
-st.sidebar.markdown("---")
-if st.sidebar.button("🚀 Запустить симуляцию турнира"):
-    demo_data = []
-    
-    # Берем список команд (если пустой — создаем тестовый)
-    current_teams = st.session_state.team_list if len(st.session_state.team_list) > 1 else ["Gorki", "Strawberry", "МГГК", "Целеево", "Forest"]
-    
-    # Создаем 4-6 случайных матчей
-    num_matches = 6
-    for i in range(num_matches):
-        # Выбираем две случайные разные команды
-        t_a, t_b = random.sample(current_teams, 2)
-        m_id = f"{t_a}_vs_{t_b}"
-        
-        # Генерируем все 18 лунок для этого матча
-        for h in range(1, 19):
-            res = random.choice([1, 0, 2])
-            demo_data.append({
-                "match_id": m_id,
-                "hole": h,
-                "result": res,
-                "pair_a": "Игрок А1, А2",
-                "pair_b": "Игрок Б1, Б2"
-            })
-    
-    # Сохраняем все матчи в один файл
-    new_df = pd.DataFrame(demo_data)
-    new_df.to_csv(FILE, index=False)
-    
-    st.toast('Турнирная таблица заполнена! ⛳', icon='🔥')
-    time.sleep(1)
+# Симуляция (для проверки)
+if st.sidebar.button("🚀 Демо-турнир"):
+    demo = []
+    for _ in range(4):
+        t_a_d, t_b_d = random.sample(st.session_state.team_list, 2)
+        for h in range(1, 11):
+            demo.append({"match_id": f"{t_a_d}_vs_{t_b_d}", "hole": h, "result": random.choice([1,0,2]), "pair_a": "Игрок А", "pair_b": "Игрок Б"})
+    pd.DataFrame(demo).to_csv(FILE, index=False)
     st.rerun()
