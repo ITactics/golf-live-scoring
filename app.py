@@ -74,6 +74,16 @@ if uploaded_logo is not None:
         f.write(uploaded_logo.getbuffer())
     st.rerun()
 
+with st.sidebar.expander("🖼 Загрузить логотипы команд"):
+    if st.session_state.team_list:
+        target_team = st.selectbox("Для какой команды?", st.session_state.team_list)
+        team_logo = st.file_uploader(f"Логотип для {target_team}", type=["png", "jpg"])
+        if team_logo:
+            with open(f"logo_{target_team}.png", "wb") as f:
+                f.write(team_logo.getbuffer())
+            st.success(f"Логотип для {target_team} сохранен!")
+
+
 bg_url = st.sidebar.text_input("URL фона (опционально)")
 if bg_url:
     st.markdown(f"<style>.stApp {{ background-image: url('{bg_url}'); }}</style>", unsafe_allow_html=True)
@@ -280,74 +290,108 @@ with st.expander("📊 Посмотреть все записи (Лог матч
         st.write("Записей пока нет")
 
 # ======================
-# ОБЩАЯ СТРАНИЦА (Как на листке ТЗ)
+# ОБЩАЯ СТРАНИЦА ТУРНИРА (КАК НА ФОТО)
 # ======================
 st.markdown("---")
-st.header("📋 ОБЩАЯ СТРАНИЦА ТУРНИРА")
+st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
-# Для "Общей страницы" нам нужно считать итоги матчей
 if not df.empty:
-    # 1. Создаем список уникальных команд
-    all_teams = list(set(df['match_id'].str.split('_vs_').str[0].tolist() + 
-                         df['match_id'].str.split('_vs_').str[1].tolist()))
+    # 1. ТАБЛИЦА РЕЙТИНГА (Верхняя часть фото)
+    # Считаем сумму выигранных лунок для каждой команды из списка
+    stats = []
+    for t in st.session_state.team_list:
+        wins_a = len(df[(df.match_id.str.startswith(t)) & (df.result == 1)])
+        wins_b = len(df[(df.match_id.str.endswith(t)) & (df.result == 2)])
+        total = wins_a + wins_b
+        stats.append({"Команда": t, "Очки": float(total)})
     
-    leaderboard_data = []
+    ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
     
-    for t_name in all_teams:
-        # Считаем, сколько всего лунок выиграла эта команда во всех матчах
-        # (Когда она была командой А и результат 1, или когда была Б и результат 2)
-        wins_as_a = len(df[(df['match_id'].str.startswith(t_name)) & (df['result'] == 1)])
-        wins_as_b = len(df[(df['match_id'].str.endswith(t_name)) & (df['result'] == 2)])
-        total_wins = wins_as_a + wins_as_b
-        
-        leaderboard_data.append({
-            "КОМАНДА": t_name,
-            "1 ДЕНЬ": total_wins, # Здесь можно добавить логику разделения по дням
-            "2 ДЕНЬ": 0,
-            "3 ДЕНЬ": 0,
-            "ИТОГО": total_wins
-        })
+    # Вывод таблицы в две колонки для компактности
+    lt1, lt2 = st.columns(2)
+    half = len(ldf) // 2 + len(ldf) % 2
+    with lt1: st.table(ldf.iloc[:half])
+    with lt2: st.table(ldf.iloc[half:])
+
+    st.markdown("---")
+
+    # 2. СЕТКА КАРТОЧЕК МАТЧЕЙ (Нижняя часть фото)
+    unique_matches = df['match_id'].unique()
     
-    # Создаем таблицу и сортируем по убыванию (как на рисунке)
-    final_ldf = pd.DataFrame(leaderboard_data).sort_values("ИТОГО", ascending=False)
-    
-    # Выводим строгую таблицу (st.table ближе к виду на листке)
-    st.table(final_ldf)
+    # Рисуем по 2 карточки в ряд
+    for i in range(0, len(unique_matches), 2):
+        row_cols = st.columns(2)
+        for j in range(2):
+            if i + j < len(unique_matches):
+                m_id = unique_matches[i+j]
+                t_a, t_b = m_id.split("_vs_")
+                m_data = df[df.match_id == m_id]
+                
+                # Текущий счет и фамилии
+                score_a = len(m_data[m_data.result == 1])
+                score_b = len(m_data[m_data.result == 2])
+                last_row = m_data.iloc[-1]
+                
+                with row_cols[j]:
+                    # Формируем карточку в стиле ТЗ
+                    st.markdown(f"""
+                    <div style="background-color: white; padding: 15px; border-radius: 10px; border-left: 10px solid #cc0000; margin-bottom: 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; color: black;">
+                            <div style="text-align: center; width: 30%;">
+                                <img src="logo_{t_a}.png" width="45" onerror="this.src='https://flaticon.com'">
+                                <p style="font-size: 13px; font-weight: bold; margin: 5px 0;">{t_a}</p>
+                                <p style="font-size: 11px; color: #666; margin: 0;">{last_row['pair_a']}</p>
+                            </div>
+                            <div style="text-align: center; width: 40%;">
+                                <h1 style="color: #cc0000; margin: 0; font-size: 40px;">{score_a}:{score_b}</h1>
+                                <p style="font-size: 10px; color: #999; margin: 0;">Матч в процессе</p>
+                            </div>
+                            <div style="text-align: center; width: 30%;">
+                                <img src="logo_{t_b}.png" width="45" onerror="this.src='https://flaticon.com'">
+                                <p style="font-size: 13px; font-weight: bold; margin: 5px 0;">{t_b}</p>
+                                <p style="font-size: 11px; color: #666; margin: 0;">{last_row['pair_b']}</p>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 else:
-    st.info("Здесь будет общая таблица турнира, когда появятся результаты первых лунок.")
+    st.info("Здесь появятся общая таблица и карточки матчей, когда маркер введет первые данные.")
 
 # ======================
-# ДЕМО-РЕЖИМ (Новая версия под кнопки)
+# ДЕМО-РЕЖИМ (Много матчей для Общей страницы)
 # ======================
 import random
 import time
 
 st.sidebar.markdown("---")
-if st.sidebar.button("🚀 Запустить симуляцию матча"):
+if st.sidebar.button("🚀 Запустить симуляцию турнира"):
     demo_data = []
     
-    # Берем команды из тех, что вписаны в Sidebar прямо сейчас
-    t_a = team_a_label if 'team_a_label' in locals() else "Команда А"
-    t_b = team_b_label if 'team_b_label' in locals() else "Команда Б"
-    m_id = f"{t_a}_vs_{t_b}"
+    # Берем список команд (если пустой — создаем тестовый)
+    current_teams = st.session_state.team_list if len(st.session_state.team_list) > 1 else ["Gorki", "Strawberry", "МГГК", "Целеево", "Forest"]
     
-    # Генерируем результаты для всех 18 лунок
-    for h in range(1, 19):
-        # Случайный результат: 1 (Выигрыш А), 0 (Ничья), 2 (Выигрыш Б)
-        res = random.choice([1, 0, 2])
+    # Создаем 4-6 случайных матчей
+    num_matches = 6
+    for i in range(num_matches):
+        # Выбираем две случайные разные команды
+        t_a, t_b = random.sample(current_teams, 2)
+        m_id = f"{t_a}_vs_{t_b}"
         
-        demo_data.append({
-            "match_id": m_id,
-            "hole": h,
-            "result": res,
-            "pair_a": "Демо Игрок А",
-            "pair_b": "Демо Игрок Б"
-        })
+        # Генерируем все 18 лунок для этого матча
+        for h in range(1, 19):
+            res = random.choice([1, 0, 2])
+            demo_data.append({
+                "match_id": m_id,
+                "hole": h,
+                "result": res,
+                "pair_a": "Игрок А1, А2",
+                "pair_b": "Игрок Б1, Б2"
+            })
     
-    # Сохраняем в файл с правильными колонками
+    # Сохраняем все матчи в один файл
     new_df = pd.DataFrame(demo_data)
     new_df.to_csv(FILE, index=False)
     
-    st.toast('Симуляция матча завершена! ⛳', icon='🔥')
+    st.toast('Турнирная таблица заполнена! ⛳', icon='🔥')
     time.sleep(1)
     st.rerun()
