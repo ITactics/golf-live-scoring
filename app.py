@@ -74,14 +74,30 @@ if uploaded_logo is not None:
         f.write(uploaded_logo.getbuffer())
     st.rerun()
 
+# ======================
+# ЗАГРУЗКА ЛОГОТИПОВ
+# ======================
 with st.sidebar.expander("🖼 Загрузить логотипы команд"):
     if st.session_state.team_list:
-        target_team = st.selectbox("Для какой команды?", st.session_state.team_list)
-        team_logo = st.file_uploader(f"Логотип для {target_team}", type=["png", "jpg"])
+        # 1. Выбираем команду
+        target_team = st.selectbox("Для какой команды?", st.session_state.team_list, key="select_team_logo")
+        
+        # 2. Показываем текущий логотип, если он уже есть
+        logo_path = f"logo_{target_team}.png"
+        if os.path.exists(logo_path):
+            st.image(logo_path, width=50, caption="Текущий логотип")
+        
+        # 3. Загружаем новый (добавили уникальный key, зависящий от команды)
+        team_logo = st.file_uploader(f"Новое лого для {target_team}", type=["png", "jpg"], key=f"uploader_{target_team}")
+        
         if team_logo:
-            with open(f"logo_{target_team}.png", "wb") as f:
+            # Сохраняем физически на диск
+            with open(logo_path, "wb") as f:
                 f.write(team_logo.getbuffer())
-            st.success(f"Логотип для {target_team} сохранен!")
+            st.success(f"Логотип для {target_team} успешно сохранен!")
+            # Небольшая задержка и перезапуск, чтобы очистить загрузчик и обновить картинку
+            time.sleep(1)
+            st.rerun()
 
 
 bg_url = st.sidebar.text_input("URL фона (опционально)")
