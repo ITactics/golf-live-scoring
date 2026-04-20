@@ -316,7 +316,7 @@ else:
     st.info("Здесь будет общая таблица турнира, когда появятся результаты первых лунок.")
 
 # ======================
-# ДЕМО-РЕЖИМ (Финальная версия с именами)
+# ДЕМО-РЕЖИМ (Новая версия под кнопки)
 # ======================
 import random
 import time
@@ -324,42 +324,29 @@ import time
 st.sidebar.markdown("---")
 if st.sidebar.button("🚀 Запустить симуляцию матча"):
     demo_data = []
-    # Реальные игроки для красоты в таблицах
-    players = {
-        "BMW": ["Александр", "Дмитрий", "Максим"],
-        "Audi": ["Андрей", "Сергей", "Артем"]
-    }
-    teams = ["BMW", "Audi"]
     
-    # Генерируем все 18 лунок
+    # Берем команды из тех, что вписаны в Sidebar прямо сейчас
+    t_a = team_a_label if 'team_a_label' in locals() else "Команда А"
+    t_b = team_b_label if 'team_b_label' in locals() else "Команда Б"
+    m_id = f"{t_a}_vs_{t_b}"
+    
+    # Генерируем результаты для всех 18 лунок
     for h in range(1, 19):
-        current_par = random.choice([3, 4, 5])
-        for t in teams:
-            current_player = random.choice(players[t])
-            # Реалистичные удары (около Пара)
-            random_strokes = current_par + random.randint(-1, 2)
-            random_putts = random.randint(1, 3)
-            
-            demo_data.append({
-                "team": t, 
-                "player": current_player, 
-                "hole": h, 
-                "par": current_par, 
-                "strokes": random_strokes, 
-                "putts": random_putts
-            })
+        # Случайный результат: 1 (Выигрыш А), 0 (Ничья), 2 (Выигрыш Б)
+        res = random.choice([1, 0, 2])
+        
+        demo_data.append({
+            "match_id": m_id,
+            "hole": h,
+            "result": res,
+            "pair_a": "Демо Игрок А",
+            "pair_b": "Демо Игрок Б"
+        })
     
-    # Синхронизируем команды и сохраняем
-    st.session_state.team_list = teams
-    if 'save_teams' in globals():
-        save_teams(teams)
+    # Сохраняем в файл с правильными колонками
+    new_df = pd.DataFrame(demo_data)
+    new_df.to_csv(FILE, index=False)
     
-    # Записываем результаты в CSV
-    pd.DataFrame(demo_data).to_csv(FILE, index=False)
-    
-    # Всплывающее стильное уведомление
-    st.toast('Матч на 18 лунок успешно сформирован! ⛳', icon='🔥')
-    
-    # Небольшая пауза для эффекта и обновление
+    st.toast('Симуляция матча завершена! ⛳', icon='🔥')
     time.sleep(1)
     st.rerun()
