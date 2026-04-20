@@ -148,46 +148,86 @@ if st.button("💾 Сохранить результат"):
 # ======================
 # MATCH LOGIC
 # ======================
-st.markdown("## 🏆 LIVE MATCH")
+st.markdown(f"## 🏆 LIVE MATCH ({format_type})")
 
 if not df.empty and len(st.session_state.team_list) >= 2:
     t1 = st.session_state.team_list[0]
     t2 = st.session_state.team_list[1]
     
-    # Группируем данные: берем лучший результат (минимальный) по каждой лунке для каждой команды
+    # Группируем и сортируем лунки
     match = df.groupby(["hole", "team"])["strokes"].min().unstack()
-    
-    # Проверяем наличие колонок, чтобы код не упал
     for t in [t1, t2]:
-        if t not in match.columns:
-            match[t] = 999
-            
-    match = match.fillna(999)
+        if t not in match.columns: match[t] = 999
+    match = match.fillna(999).sort_index()
 
+    # 1. ЛОГИКА ОТРЕЗКОВ (9-9-18 или 6-6-6-18)
+    if format_type == "9-9-18":
+        segments = [("Front 9", range(1, 10)), ("Back 9", range(10, 19)), ("Overall", range(1, 19))]
+    else: # 6-6-6-18
+        segments = [("1st Six", range(1, 7)), ("2nd Six", range(7, 13)), ("3rd Six", range(13, 19)), ("Overall", range(1, 19))]
+
+    seg_results = []
+    total_points_t1, total_points_t2 = 0, 0
+
+    for name, h_range in segments:
+        t1_wins, t2_wins = 0, 0
+        for h in h_range:
+            if h in match.index:
+                a, b = match.loc[h, t1], match.loc[h, t2]
+                if a < b and a != 999: t1_wins += 1
+                elif b < a and b != 999: t2_wins += 1
+        
+        if t1_wins > t2_wins:
+            seg_results.append((name, f"🟢 {t1}"))
+            total_points_t1 += 1
+        elif t2_wins > t1_wins:
+            seg_results.append((name, f"🔴 {t2}"))
+            total_points_t2 += 1
+        else:
+            seg_results.append((name, "🔵 AS"))
+
+    # 2. ВЫВОД ОЧКОВ ПО ОТРЕЗКАМ (Верхний ряд)
+    cols = st.columns(len(seg_results))
+    for i, (name, res) in enumerate(seg_results):
+        cols[i].metric(name, res)
+
+    st.markdown("---")
+
+    # 3. РАСЧЕТ КРУЖОЧКОВ ДЛЯ ТАБЛИЦЫ
     a_score, b_score = 0, 0
     results = []
-
-    # Цикл сравнения
     for _, row in match.iterrows():
-        # ВСЁ, что ниже, должно иметь отступ (4 пробела)
         a, b = row[t1], row[t2]
-        
         if a == 999 or b == 999:
             results.append("—")
         elif a < b:
             a_score += 1
-            # Первая команда (t1) выиграла, вторая (t2) проиграла
             results.append(f"🟢 {t1} / 🔴 {t2}") 
         elif b < a:
             b_score += 1
-            # Вторая команда (t2) выиграла, первая (t1) проиграла
             results.append(f"🟢 {t2} / 🔴 {t1}") 
         else:
-            # Ничья
             results.append(f"🔵 AS ({t1} = {t2})")
 
-    # !!! ВОТ ЭТА СТРОЧКА ВАЖНА: Добавляем расчеты в таблицу !!!
     match["Результат лунки"] = results
+
+    # 4. ГЛАВНОЕ ТАБЛО (Счет по лункам)
+    sc1, sc2, sc3 = st.columns([2, 3, 2])
+    with sc1:
+        st.metric(f"Holes {t1}", a_score)
+    with sc2:
+        if total_points_t1 > total_points_t2:
+            st.markdown(f"<h2 style='text-align:center;color:#00ff88;'>{t1} LEADING MATCH</h2>", unsafe_allow_html=True)
+        elif total_points_t2 > total_points_t1:
+            st.markdown(f"<h2 style='text-align:center;color:#ff4d4d;'>{t2} LEADING MATCH</h2>", unsafe_allow_html=True)
+        else:
+            st.markdown("<h2 style='text-align:center;color:#4da6ff;'>ALL SQUARE</h2>", unsafe_allow_html=True)
+    with sc3:
+        st.metric(f"Holes {t2}", b_score)
+
+    # 5. ВЫВОД ТАБЛИЦЫ
+    display_df = match[[t1, t2, "Результат лунки"]].replace(999, "-")
+    st.dataframe(display_df, use_container_width=True)
 
     # Scoreboard (Метрики)
     sc1, sc2, sc3 = st.columns([2, 3, 2])
