@@ -116,7 +116,8 @@ if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all
 # ======================
 st.header("📱 Ввод результатов (Маркер)")
 hole = st.selectbox("Выберите лунку:", list(range(1, 19)), key="hole_sel")
-match_id = f"{team_a}_vs_{team_b}"
+teams_sorted = sorted([team_a, team_b])
+match_id = f"{teams_sorted[0]}_vs_{teams_sorted[1]}"
 
 def save_result(val):
     global df
