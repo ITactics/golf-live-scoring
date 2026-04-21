@@ -170,16 +170,39 @@ st.markdown("---")
 st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
-    # 1. Таблица рейтинга
+    # 1. ТАБЛИЦА РЕЙТИНГА (ИСПРАВЛЕННЫЙ ПОДСЧЕТ ПО МАТЧАМ)
     stats = []
     for t in st.session_state.team_list:
-        p = len(df[(df.match_id.str.startswith(t)) & (df.result == 1)]) + len(df[(df.match_id.str.endswith(t)) & (df.result == 2)])
-        stats.append({"Команда": t, "Очки": float(p)})
+        total_match_points = 0
+        
+        # Находим все матчи, где участвовала команда
+        team_matches = df[df.match_id.str.contains(t)].match_id.unique()
+        
+        for m_id in team_matches:
+            m_data = df[df.match_id == m_id]
+            t_a, t_b = m_id.split("_vs_")
+            
+            # Определяем интервалы (9-9-18 или 6-6-6-18)
+            if format_type == "9-9-18":
+                intervals = [range(1, 10), range(10, 19), range(1, 19)]
+            else:
+                intervals = [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+            
+            # Считаем очки за каждый отрезок
+            for h_range in intervals:
+                a_w = len(m_data[(m_data.hole.isin(h_range)) & (m_data.result == 1)])
+                b_w = len(m_data[(m_data.hole.isin(h_range)) & (m_data.result == 2)])
+                
+                if t == t_a:
+                    if a_w > b_w: total_match_points += 1
+                    elif a_w == b_w and a_w > 0: total_match_points += 0.5
+                else:
+                    if b_w > a_w: total_match_points += 1
+                    elif b_w == a_w and b_w > 0: total_match_points += 0.5
+        
+        stats.append({"Команда": t, "Очки": float(total_match_points)})
     
     ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
-    c_l, c_r = st.columns(2)
-    with c_l: st.table(ldf.iloc[:len(ldf)//2 + len(ldf)%2])
-    with c_r: st.table(ldf.iloc[len(ldf)//2 + len(ldf)%2:])
 
     # 2. Карточки матчей
     unique_matches = df.match_id.unique()
