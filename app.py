@@ -103,7 +103,13 @@ with col_sb:
     # Защита: нельзя выбрать ту же команду
     available_b = [t for t in st.session_state.team_list if t != team_a]
     team_b = st.selectbox("Команда Б", available_b, key="tb_sel")
-    p_b = st.text_input("Пара Б (ФИО)", "Сидоров/Борисов", key="pb_input")
+    if len(st.session_state.team_list) < 2:
+    st.warning("Добавьте минимум 2 команды")
+    st.stop()
+    if not available_b:
+        st.warning("Нельзя выбрать одинаковые команды")
+        st.stop()
+        p_b = st.text_input("Пара Б (ФИО)", "Сидоров/Борисов", key="pb_input")
 
 format_type = st.sidebar.selectbox("Формат", ["9-9-18", "6-6-6-18"], key="fmt_sel")
 
