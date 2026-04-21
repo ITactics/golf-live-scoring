@@ -164,47 +164,54 @@ if not m_df.empty:
         st.markdown(f"<h1 style='text-align:center; font-size:60px;'>{a_w} : {b_w}</h1>", unsafe_allow_html=True)
 
 # ======================
-# ОБЩАЯ СТАТИСТИКА
+# ОБЩАЯ СТАТИСТИКА (LEADERBOARD + CARDS)
 # ======================
 st.markdown("---")
 st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
-    # 1. ТАБЛИЦА РЕЙТИНГА (ИСПРАВЛЕННЫЙ ПОДСЧЕТ ПО МАТЧАМ)
+    # 1. ТАБЛИЦА РЕЙТИНГА (Подсчет по Match Play: 9-9-18)
     stats = []
     for t in st.session_state.team_list:
         total_match_points = 0
-        
-        # Находим все матчи, где участвовала команда
         team_matches = df[df.match_id.str.contains(t)].match_id.unique()
         
         for m_id in team_matches:
             m_data = df[df.match_id == m_id]
             t_a, t_b = m_id.split("_vs_")
             
-            # Определяем интервалы (9-9-18 или 6-6-6-18)
+            # Интервалы по формату
             if format_type == "9-9-18":
                 intervals = [range(1, 10), range(10, 19), range(1, 19)]
             else:
                 intervals = [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
             
-            # Считаем очки за каждый отрезок
             for h_range in intervals:
                 a_w = len(m_data[(m_data.hole.isin(h_range)) & (m_data.result == 1)])
                 b_w = len(m_data[(m_data.hole.isin(h_range)) & (m_data.result == 2)])
                 
+                if a_w == 0 and b_w == 0: continue # Отрезок не начат
+                
                 if t == t_a:
                     if a_w > b_w: total_match_points += 1
-                    elif a_w == b_w and a_w > 0: total_match_points += 0.5
+                    elif a_w == b_w: total_match_points += 0.5
                 else:
                     if b_w > a_w: total_match_points += 1
-                    elif b_w == a_w and b_w > 0: total_match_points += 0.5
+                    elif b_w == a_w: total_match_points += 0.5
         
         stats.append({"Команда": t, "Очки": float(total_match_points)})
     
     ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
+    
+    # ВЫВОД ТАБЛИЦЫ (Добавлено отображение!)
+    c_tab1, c_tab2 = st.columns(2)
+    half = len(ldf) // 2 + len(ldf) % 2
+    with c_tab1: st.table(ldf.iloc[:half])
+    with c_tab2: st.table(ldf.iloc[half:])
 
-    # 2. Карточки матчей
+    st.markdown("---")
+
+    # 2. КАРТОЧКИ МАТЧЕЙ (С добавлением статуса UP/DN)
     unique_matches = df.match_id.unique()
     for i in range(0, len(unique_matches), 2):
         row = st.columns(2)
@@ -213,40 +220,45 @@ if not df.empty:
                 curr_m = unique_matches[i+j]
                 m_data = df[df.match_id == curr_m]
                 t_a_n, t_b_n = curr_m.split("_vs_")
-                s_a, s_b = len(m_data[m_data.result == 1]), len(m_data[m_data.result == 2])
                 
+                s_a = len(m_data[m_data.result == 1])
+                s_b = len(m_data[m_data.result == 2])
+                
+                # Расчет UP/DN для центра карточки
+                diff = s_a - s_b
+                if diff > 0: status_info = f"{diff} UP {t_a_n}"
+                elif diff < 0: status_info = f"{abs(diff)} UP {t_b_n}"
+                else: status_info = "ALL SQUARE"
+
                 p_a_display = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
                 p_b_display = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
-
-                logo_a_v4 = get_base64_image(f"logo_{t_a_n}.png")
-                logo_b_v4 = get_base64_image(f"logo_{t_b_n}.png")
 
                 with row[j]:
                     st.markdown(f"""
                     <div class="match-card-container" style="background:white; padding:15px; border-radius:10px; border-left:10px solid #cc0000; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; box-shadow: 2px 2px 8px rgba(0,0,0,0.2);">
                         <div style="text-align:center; width:33%;">
-                            <img src="{logo_a_v4}" width="40"><br>
+                            <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="40"><br>
                             <b style="font-size: 14px;">{t_a_n}</b><br>
-                            <span style="font-size: 11px; opacity: 0.8;">{p_a_display}</span>
+                            <span style="font-size: 10px; opacity: 0.8;">{p_a_display}</span>
                         </div>
                         <div style="text-align:center; width:34%;">
-                            <h1 style="color:#cc0000 !important; margin:0; font-size: 38px; font-weight: bold;">{s_a}:{s_b}</h1>
-                            <div style="font-size: 10px; opacity: 0.6;">LIVE</div>
+                            <h1 style="color:#cc0000 !important; margin:0; font-size:36px;">{s_a}:{s_b}</h1>
+                            <div style="font-size:12px; font-weight:bold; color:black;">{status_info}</div>
                         </div>
                         <div style="text-align:center; width:33%;">
-                            <img src="{logo_b_v4}" width="40"><br>
+                            <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="40"><br>
                             <b style="font-size: 14px;">{t_b_n}</b><br>
-                            <span style="font-size: 11px; opacity: 0.8;">{p_b_display}</span>
+                            <span style="font-size: 10px; opacity: 0.8;">{p_b_display}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
 
-# Симуляция
-if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"): # Добавлен уникальный ключ
+# Симуляция (18 лунок для полноты картины)
+if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     demo = []
     for _ in range(4):
         t_a_d, t_b_d = random.sample(st.session_state.team_list, 2)
-        for h in range(1, 11):
-            demo.append({"match_id": f"{t_a_d}_vs_{t_b_d}", "hole": h, "result": random.choice([1,0,2]), "pair_a": "Игрок А", "pair_b": "Игрок Б"})
+        for h in range(1, 19): # Теперь 18 лунок
+            demo.append({"match_id": f"{t_a_d}_vs_{t_b_d}", "hole": h, "result": random.choice([1,0,2]), "pair_a": "Игрок А1/А2", "pair_b": "Игрок Б1/Б2"})
     pd.DataFrame(demo).to_csv(FILE, index=False)
     st.rerun()
