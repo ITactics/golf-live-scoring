@@ -55,11 +55,12 @@ h1, h2, h3, p, label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # ======================
-# 3. SIDEBAR (МЕНЕДЖЕР)
+# ======================
+# 3. SIDEBAR (МЕНЕДЖЕР РАСПИСАНИЯ И КОМАНД)
 # ======================
 st.sidebar.header("🎨 Настройки турнира")
 
-# Логотипы команд
+# 1. Логотипы команд
 with st.sidebar.expander("🖼 Логотипы команд"):
     target_t = st.selectbox("Команда:", st.session_state.team_list, key="sel_logo")
     t_logo = st.file_uploader(f"Загрузить лого для {target_t}", type=["png", "jpg"], key="up_logo")
@@ -69,46 +70,75 @@ with st.sidebar.expander("🖼 Логотипы команд"):
         st.success("Сохранено!")
         st.rerun()
 
-# Управление списком команд
-st.sidebar.markdown("---")
-with st.sidebar.expander("⚙️ Управление списком команд"):
-    new_team_name = st.text_input("Название новой команды:", key="new_team_input")
-    if st.button("➕ Добавить в базу", key="add_team_btn"):
+# 2. Управление списком клубов
+with st.sidebar.expander("⚙️ Настройка списка клубов"):
+    new_team_name = st.text_input("Название нового клуба:", key="new_team_input")
+    if st.button("➕ Добавить клуб", key="add_team_btn"):
         if new_team_name and new_team_name not in st.session_state.team_list:
             st.session_state.team_list.append(new_team_name)
             save_teams(st.session_state.team_list)
             st.rerun()
     
     if len(st.session_state.team_list) > 0:
-        team_to_del = st.selectbox("Удалить из базы:", st.session_state.team_list, key="del_team_sel")
-        if st.button("🗑 Удалить команду", key="del_team_btn"):
+        team_to_del = st.selectbox("Удалить клуб:", st.session_state.team_list, key="del_team_sel")
+        if st.button("🗑 Удалить", key="del_team_btn"):
             st.session_state.team_list.remove(team_to_del)
             save_teams(st.session_state.team_list)
             st.rerun()
 
-# Скачивание результатов
+# 3. МЕНЕДЖЕР РАСПИСАНИЯ (Создаем игры заранее)
+st.sidebar.markdown("---")
+with st.sidebar.expander("📅 Создать расписание (Пары)"):
+    st.write("Добавьте пары на сегодня:")
+    m_ta = st.selectbox("Клуб А", st.session_state.team_list, key="m_ta")
+    m_pa = st.text_input("Пара А (Фамилии)", "Иванов/Петров", key="m_pa")
+    
+    m_tb = st.selectbox("Клуб Б", [t for t in st.session_state.team_list if t != m_ta], key="m_tb")
+    m_pb = st.text_input("Пара Б (Фамилии)", "Сидоров/Борисов", key="m_pb")
+    
+    if st.button("➕ Добавить игру в список"):
+        if 'schedule' not in st.session_state: 
+            st.session_state.schedule = []
+        
+        match_info = {
+            "id": f"{m_ta}_vs_{m_tb}",
+            "label": f"{m_ta} ({m_pa}) vs {m_tb} ({m_pb})",
+            "ta": m_ta, "pa": m_pa, "tb": m_tb, "pb": m_pb
+        }
+        # Проверка на дубликат в расписании
+        if match_info["id"] not in [m["id"] for m in st.session_state.schedule]:
+            st.session_state.schedule.append(match_info)
+            st.success("Матч добавлен!")
+            st.rerun()
+
+# 4. ВЫБОР АКТИВНОГО МАТЧА (Для Маркера)
+st.sidebar.markdown("---")
+st.sidebar.subheader("🎯 Активная игра")
+
+if 'schedule' in st.session_state and st.session_state.schedule:
+    # Маркер просто выбирает готовую пару из списка
+    options = [m["label"] for m in st.session_state.schedule]
+    selected_label = st.sidebar.selectbox("Какую игру судим?", options)
+    
+    # Авто-подстановка данных для всего остального кода
+    active_m = next(m for m in st.session_state.schedule if m["label"] == selected_label)
+    team_a, p_a = active_m["ta"], active_m["pa"]
+    team_b, p_b = active_m["tb"], active_m["pb"]
+else:
+    st.sidebar.warning("Сначала добавьте игры в расписание выше!")
+    team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
+
+format_type = st.sidebar.selectbox("Формат зачета", ["9-9-18", "6-6-6-18"], key="fmt_sel")
+
+# Скачивание и сброс
 st.sidebar.markdown("---")
 if not df.empty:
     csv = df.to_csv(index=False).encode('utf-8-sig')
-    st.sidebar.download_button("📥 Скачать итоги (CSV)", data=csv, file_name='golf_results.csv', mime='text/csv')
-
-# Текущий матч (С защитой от дублей)
-st.sidebar.markdown("---")
-st.sidebar.subheader("👥 Состав текущего матча")
-col_sa, col_sb = st.sidebar.columns(2)
-with col_sa:
-    team_a = st.selectbox("Команда А", st.session_state.team_list, key="ta_sel")
-    p_a = st.text_input("Пара А (ФИО)", "Иванов/Петров", key="pa_input")
-with col_sb:
-    # Защита: нельзя выбрать ту же команду
-    available_b = [t for t in st.session_state.team_list if t != team_a]
-    team_b = st.selectbox("Команда Б", available_b, key="tb_sel")
-    p_b = st.text_input("Пара Б (ФИО)", "Сидоров/Борисов", key="pb_input")
-
-format_type = st.sidebar.selectbox("Формат", ["9-9-18", "6-6-6-18"], key="fmt_sel")
+    st.sidebar.download_button("📥 Скачать CSV", data=csv, file_name='golf_results.csv', mime='text/csv')
 
 if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all_btn"):
     if os.path.exists(FILE): os.remove(FILE)
+    if 'schedule' in st.session_state: del st.session_state.schedule
     st.rerun()
 
 # ======================
