@@ -177,16 +177,43 @@ st.markdown("---")
 st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
-    # 1. Таблица рейтинга
-    stats = []
-    for t in st.session_state.team_list:
-        p = len(df[(df.match_id.str.startswith(t)) & (df.result == 1)]) + len(df[(df.match_id.str.endswith(t)) & (df.result == 2)])
-        stats.append({"Команда": t, "Очки": float(p)})
+# 1. Таблица рейтинга (НОРМАЛЬНАЯ ЛОГИКА)
+stats = {team: {"Очки": 0, "Победы": 0, "Ничьи": 0, "Поражения": 0} 
+         for team in st.session_state.team_list}
+
+matches = df.match_id.unique()
+
+for m in matches:
+    m_data = df[df.match_id == m]
     
-    ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
-    c_l, c_r = st.columns(2)
-    with c_l: st.table(ldf.iloc[:len(ldf)//2 + len(ldf)%2])
-    with c_r: st.table(ldf.iloc[len(ldf)//2 + len(ldf)%2:])
+    # ❗ считаем только завершенные матчи
+    if len(m_data) < 18:
+        continue
+
+    team_a_m, team_b_m = m.split("_vs_")
+    
+    a_wins = len(m_data[m_data.result == 1])
+    b_wins = len(m_data[m_data.result == 2])
+
+    if a_wins > b_wins:
+        stats[team_a_m]["Очки"] += 3
+        stats[team_a_m]["Победы"] += 1
+        stats[team_b_m]["Поражения"] += 1
+
+    elif b_wins > a_wins:
+        stats[team_b_m]["Очки"] += 3
+        stats[team_b_m]["Победы"] += 1
+        stats[team_a_m]["Поражения"] += 1
+
+    else:
+        stats[team_a_m]["Очки"] += 1
+        stats[team_b_m]["Очки"] += 1
+        stats[team_a_m]["Ничьи"] += 1
+        stats[team_b_m]["Ничьи"] += 1
+
+ldf = pd.DataFrame([
+    {"Команда": team, **vals} for team, vals in stats.items()
+]).sort_values(["Очки", "Победы"], ascending=False)
 
     # 2. Карточки матчей
     unique_matches = df.match_id.unique()
