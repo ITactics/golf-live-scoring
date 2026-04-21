@@ -201,6 +201,9 @@ if not df.empty:
         stats.append({"Команда": t, "Очки": total_points})
     
     ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
+    ldf = ldf.reset_index(drop=True) # Очищаем старые индексы
+    ldf.index += 1                  # Делаем так, чтобы места начинались с 1
+
     
     # ЭТА СТРОЧКА УБИРАЕТ ЛИШНИЕ НУЛИ (2.5000 -> 2.5)
     ldf["Очки"] = ldf["Очки"].apply(lambda x: f"{x:g}") 
