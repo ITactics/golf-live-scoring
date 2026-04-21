@@ -102,6 +102,9 @@ with col_sa:
 with col_sb:
     # Защита: нельзя выбрать ту же команду
     available_b = [t for t in st.session_state.team_list if t != team_a]
+    if not available_b:
+        st.warning("Добавьте минимум 2 команды")
+        st.stop()
     team_b = st.selectbox("Команда Б", available_b, key="tb_sel")
     p_b = st.text_input("Пара Б (ФИО)", "Сидоров/Борисов", key="pb_input")
 
