@@ -171,39 +171,41 @@ st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
     # 1. ТАБЛИЦА РЕЙТИНГА (Подсчет по Match Play: 9-9-18)
+        # 1. ТАБЛИЦА РЕЙТИНГА (ИСПРАВЛЕННЫЙ ПОДСЧЕТ)
     stats = []
     for t in st.session_state.team_list:
-        total_match_points = 0
-        team_matches = df[df.match_id.str.contains(t)].match_id.unique()
+        total_points = 0.0
+        # Ищем все матчи команды
+        m_ids = df[df.match_id.str.contains(t)].match_id.unique()
         
-        for m_id in team_matches:
+        for m_id in m_ids:
             m_data = df[df.match_id == m_id]
             t_a, t_b = m_id.split("_vs_")
             
-            # Интервалы по формату
-            if format_type == "9-9-18":
-                intervals = [range(1, 10), range(10, 19), range(1, 19)]
-            else:
-                intervals = [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+            # Интервалы (9-9-18 или 6-6-6-18)
+            intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
             
             for h_range in intervals:
-                a_w = len(m_data[(m_data.hole.isin(h_range)) & (m_data.result == 1)])
-                b_w = len(m_data[(m_data.hole.isin(h_range)) & (m_data.result == 2)])
+                subset = m_data[m_data.hole.isin(h_range)]
+                if subset.empty: continue # Пропускаем, если лунки еще не игрались
                 
-                if a_w == 0 and b_w == 0: continue # Отрезок не начат
+                a_w = len(subset[subset.result == 1])
+                b_w = len(subset[subset.result == 2])
                 
-                if t == t_a:
-                    if a_w > b_w: total_match_points += 1
-                    elif a_w == b_w: total_match_points += 0.5
-                else:
-                    if b_w > a_w: total_match_points += 1
-                    elif b_w == a_w: total_match_points += 0.5
+                # Очки: 1 за победу, 0.5 за ничью
+                if a_w == b_w:
+                    total_points += 0.5
+                elif (t == t_a and a_w > b_w) or (t == t_b and b_w > a_w):
+                    total_points += 1.0
         
-        stats.append({"Команда": t, "Очки": float(total_match_points)})
+        stats.append({"Команда": t, "Очки": total_points})
     
     ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
     
-    # ВЫВОД ТАБЛИЦЫ (Добавлено отображение!)
+    # ЭТА СТРОЧКА УБИРАЕТ ЛИШНИЕ НУЛИ (2.5000 -> 2.5)
+    ldf["Очки"] = ldf["Очки"].apply(lambda x: f"{x:g}") 
+    
+    # ВЫВОД ТАБЛИЦЫ В ДВЕ КОЛОНКИ
     c_tab1, c_tab2 = st.columns(2)
     half = len(ldf) // 2 + len(ldf) % 2
     with c_tab1: st.table(ldf.iloc[:half])
