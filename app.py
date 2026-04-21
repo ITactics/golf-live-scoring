@@ -4,6 +4,7 @@ import os
 import time
 import base64
 import random
+import json
 
 # ======================
 # 1. СИСТЕМНЫЕ НАСТРОЙКИ
@@ -55,10 +56,26 @@ h1, h2, h3, p, label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # ======================
-# ======================
-# 3. SIDEBAR (МЕНЕДЖЕР РАСПИСАНИЯ И КОМАНД)
+# 3. SIDEBAR (С ОБЩИМ РАСПИСАНИЕМ ДЛЯ ВСЕХ УСТРОЙСТВ)
 # ======================
 st.sidebar.header("🎨 Настройки турнира")
+
+# --- ФУНКЦИИ ДЛЯ ОБЩЕГО РАСПИСАНИЯ ---
+SCH_FILE = "schedule.json"
+
+def load_schedule():
+    if os.path.exists(SCH_FILE):
+        with open(SCH_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_schedule(sch_list):
+    with open(SCH_FILE, "w", encoding="utf-8") as f:
+        json.dump(sch_list, f, ensure_ascii=False)
+
+# Загружаем расписание при старте
+if 'schedule' not in st.session_state:
+    st.session_state.schedule = load_schedule()
 
 # 1. Логотипы команд
 with st.sidebar.expander("🖼 Логотипы команд"):
@@ -86,41 +103,39 @@ with st.sidebar.expander("⚙️ Настройка списка клубов"):
             save_teams(st.session_state.team_list)
             st.rerun()
 
-# 3. МЕНЕДЖЕР РАСПИСАНИЯ (Создаем игры заранее)
+# 3. МЕНЕДЖЕР РАСПИСАНИЯ
 st.sidebar.markdown("---")
 with st.sidebar.expander("📅 Создать расписание (Пары)"):
     st.write("Добавьте пары на сегодня:")
     m_ta = st.selectbox("Клуб А", st.session_state.team_list, key="m_ta")
     m_pa = st.text_input("Пара А (Фамилии)", "Иванов/Петров", key="m_pa")
-    
     m_tb = st.selectbox("Клуб Б", [t for t in st.session_state.team_list if t != m_ta], key="m_tb")
     m_pb = st.text_input("Пара Б (Фамилии)", "Сидоров/Борисов", key="m_pb")
     
     if st.button("➕ Добавить игру в список"):
-        if 'schedule' not in st.session_state: 
-            st.session_state.schedule = []
-        
         match_info = {
             "id": f"{m_ta}_vs_{m_tb}",
             "label": f"{m_ta} ({m_pa}) vs {m_tb} ({m_pb})",
             "ta": m_ta, "pa": m_pa, "tb": m_tb, "pb": m_pb
         }
-        # Проверка на дубликат в расписании
+        # Проверка на дубликат и сохранение в файл
         if match_info["id"] not in [m["id"] for m in st.session_state.schedule]:
             st.session_state.schedule.append(match_info)
+            save_schedule(st.session_state.schedule) # Теперь сохраняем на диск!
             st.success("Матч добавлен!")
             st.rerun()
 
-# 4. ВЫБОР АКТИВНОГО МАТЧА (Для Маркера)
+# 4. ВЫБОР АКТИВНОГО МАТЧА
 st.sidebar.markdown("---")
 st.sidebar.subheader("🎯 Активная игра")
 
-if 'schedule' in st.session_state and st.session_state.schedule:
-    # Маркер просто выбирает готовую пару из списка
+# Всегда подгружаем свежее расписание из файла
+st.session_state.schedule = load_schedule()
+
+if st.session_state.schedule:
     options = [m["label"] for m in st.session_state.schedule]
     selected_label = st.sidebar.selectbox("Какую игру судим?", options)
     
-    # Авто-подстановка данных для всего остального кода
     active_m = next(m for m in st.session_state.schedule if m["label"] == selected_label)
     team_a, p_a = active_m["ta"], active_m["pa"]
     team_b, p_b = active_m["tb"], active_m["pb"]
@@ -138,6 +153,7 @@ if not df.empty:
 
 if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all_btn"):
     if os.path.exists(FILE): os.remove(FILE)
+    if os.path.exists(SCH_FILE): os.remove(SCH_FILE) # Удаляем и файл расписания
     if 'schedule' in st.session_state: del st.session_state.schedule
     st.rerun()
 
