@@ -323,20 +323,22 @@ if not df.empty:
 
                 with row[j]:
                     st.markdown(f"""
-                    <div class="match-card-container" style="background:white; padding:15px; border-radius:10px; border-left:10px solid #cc0000; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; box-shadow: 2px 2px 8px rgba(0,0,0,0.2);">
+                    <div class="match-card-container" style="background:white; padding:15px; border-radius:15px; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-left: 8px solid #007bff; border-right: 8px solid #ff4d4d;">
                         <div style="text-align:center; width:33%;">
-                            <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="40"><br>
-                            <b style="font-size: 14px;">{t_a_n}</b><br>
-                            <span style="font-size: 10px; opacity: 0.8;">{p_a_display}</span>
+                            <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="45"><br>
+                            <b style="font-size: 14px; color:#007bff !important;">{t_a_n}</b><br>
+                            <span style="font-size: 10px; color:#555 !important;">{p_a_display}</span>
                         </div>
                         <div style="text-align:center; width:34%;">
-                            <h1 style="color:#cc0000 !important; margin:0; font-size:36px;">{s_a}:{s_b}</h1>
-                            <div style="font-size:12px; font-weight:bold; color:black;">{status_info}</div>
+                            <h1 style="color:black !important; margin:0; font-size:32px;">
+                                <span style="color:#007bff !important;">{s_a}</span>:<span style="color:#ff4d4d !important;">{s_b}</span>
+                            </h1>
+                            <div style="font-size:11px; font-weight:bold; color:#333 !important; text-transform:uppercase;">{status_info}</div>
                         </div>
                         <div style="text-align:center; width:33%;">
-                            <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="40"><br>
-                            <b style="font-size: 14px;">{t_b_n}</b><br>
-                            <span style="font-size: 10px; opacity: 0.8;">{p_b_display}</span>
+                            <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="45"><br>
+                            <b style="font-size: 14px; color:#ff4d4d !important;">{t_b_n}</b><br>
+                            <span style="font-size: 10px; color:#555 !important;">{p_b_display}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
