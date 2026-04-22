@@ -320,10 +320,10 @@ if not df.empty:
     ldf.index += 1
     
     # ВЫВОД ТАБЛИЦЫ В ДВЕ КОЛОНКИ
-    c_tab1, c_tab2 = st.columns(2)
-    half = len(ldf) // 2 + len(ldf) % 2
-    with c_tab1: st.table(ldf.iloc[:half])
-    with c_tab2: st.table(ldf.iloc[half:])
+    # c_tab1, c_tab2 = st.columns(2)
+    # half = len(ldf) // 2 + len(ldf) % 2
+    # with c_tab1: st.table(ldf.iloc[:half])
+    # with c_tab2: st.table(ldf.iloc[half:])
 
     st.markdown("---")
 
