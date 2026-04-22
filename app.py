@@ -355,8 +355,8 @@ if not df.empty:
     c1, c2 = st.columns(2)
     mid = (len(ldf) + 1) // 2
     
-    with c1: st.table(ldf.iloc[:mid].set_index('МЕСТО'))
-    with c2: st.table(ldf.iloc[mid:].set_index('МЕСТО'))
+    with c1: st.table(ldf.iloc[:mid])
+    with c2: st.table(ldf.iloc[mid:])
 
     st.markdown("---")
 
