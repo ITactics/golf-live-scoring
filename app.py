@@ -292,67 +292,73 @@ if not m_df.empty:
         """, unsafe_allow_html=True)
 
 # ======================
-# ОБЩАЯ СТАТИСТИКА (LEADERBOARD + CARDS)
+# ОБЩАЯ СВОДНАЯ ТАБЛИЦА
 # ======================
-st.markdown("---")
-st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
+st.title("ПОЛОЖЕНИЕ КОМАНД")
+
+# Фильтр по командам
+all_t_options = ["Все команды"] + st.session_state.team_list
+filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть матчи только с её участием:", all_t_options)
 
 if not df.empty:
-    # 1. ТАБЛИЦА РЕЙТИНГА (С ДЕТАЛИЗАЦИЕЙ)
-    stats = []
+    summary = []
     for t in st.session_state.team_list:
-        total_points = 0.0
-        details = []  # Список для хранения отдельных баллов (1 или 0.5)
+        t_pts = 0.0
+        t_ud = 0
+        details = []
+        # Находим все матчи конкретной команды
         m_ids = df[df.match_id.str.contains(t)].match_id.unique()
         
         for m_id in m_ids:
             m_data = df[df.match_id == m_id]
             t_a, t_b = m_id.split("_vs_")
             
-            intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+            # Считаем Match Points (1.0 или 0.5 за отрезок)
+            ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
+            for r in ints:
+                sub = m_data[m_data.hole.isin(r)]
+                if not sub.empty:
+                    aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
+                    p = 0.0
+                    if aw == bw: p = 0.5
+                    elif (t == t_a and aw > bw) or (t == t_b and bw > aw): p = 1.0
+                    
+                    if p > 0:
+                        t_pts += p
+                        details.append(f"{p:g}")
             
-            for h_range in intervals:
-                subset = m_data[m_data.hole.isin(h_range)]
-                if subset.empty: continue 
-                
-                a_w = len(subset[subset.result == 1])
-                b_w = len(subset[subset.result == 2])
-                
-                # Логика начисления
-                p = 0.0
-                if a_w == b_w:
-                    p = 0.5
-                elif (t == t_a and a_w > b_w) or (t == t_b and b_w > a_w):
-                    p = 1.0
-                
-                if p > 0:
-                    total_points += p
-                    details.append(f"{p:g}") # Добавляем "1" или "0.5" в список
-        
-        # Собираем строку вида: "2.5 (1+0.5+1)"
-        points_str = f"{total_points:g}"
-        det_str = f"({'+'.join(details)})" if details else ""
-        
-        stats.append({
-            "Команда": t, 
-            "Очки": points_str, 
-            "Детали": det_str
-        })
-    
-    ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
-    ldf = ldf.reset_index(drop=True)
-    ldf.index += 1
-    
-    # ВЫВОД ТАБЛИЦЫ В ДВЕ КОЛОНКИ
-    # c_tab1, c_tab2 = st.columns(2)
-    # half = len(ldf) // 2 + len(ldf) % 2
-    # with c_tab1: st.table(ldf.iloc[:half])
-    # with c_tab2: st.table(ldf.iloc[half:])
+            # Считаем U/D (Суммарная разница выигранных лунок)
+            aw_total = len(m_data[m_data.result == 1])
+            bw_total = len(m_data[m_data.result == 2])
+            if t == t_a: t_ud += (aw_total - bw_total)
+            else: t_ud += (bw_total - aw_total)
 
-    st.markdown("---")
+        # Формируем строку итога с детализацией
+        det_str = f"({'+'.join(details)})" if details else ""
+        summary.append({
+            "КОМАНДА": t,
+            "МАТЧИ": f"Завершено {len(m_ids)} из 3",
+            "ИТОГ": f"{t_pts:g} {det_str}",
+            "U/D": t_ud
+        })
+
+    # Сортировка: Сначала по очкам (ИТОГ), затем по разнице лунок (U/D)
+    ldf = pd.DataFrame(summary).sort_values(by=["ИТОГ", "U/D"], ascending=False)
+    ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
+    
+    # Вывод в две колонки (как на скриншоте)
+    c1, c2 = st.columns(2)
+    mid = (len(ldf) + 1) // 2
+    
+    with c1: st.table(ldf.iloc[:mid].set_index('МЕСТО'))
+    with c2: st.table(ldf.iloc[mid:].set_index('МЕСТО'))
+
+st.markdown("---")
 
     # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
     unique_matches = df.match_id.unique()
+    if filter_t != "Все команды":
+        unique_matches = [m for m in unique_matches if filter_t in m]
     for i in range(0, len(unique_matches), 2):
         row = st.columns(2)
         for j in range(2):
