@@ -344,88 +344,88 @@ if not df.empty:
 
     st.markdown("---")
 
-        # 2. КАРТОЧКИ МАТЧЕЙ
-        unique_matches = df.match_id.unique()
-        for i in range(0, len(unique_matches), 2):
-            row = st.columns(2)
-            for j in range(2):
-                if i + j < len(unique_matches):
-                    curr_m = unique_matches[i+j]
-                    m_data = df[df.match_id == curr_m]
-                    t_a_n, t_b_n = curr_m.split("_vs_")
-                    
-                    # Считаем очки матча (Match Points)
-                    pts_a, pts_b = 0.0, 0.0
-                    intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
-                    
-                    def get_status_html(h_range):
-                        sub = m_data[m_data.hole.isin(h_range)]
-                        if sub.empty: return "<span></span>", "<span></span>"
-                        a_w = len(sub[sub.result == 1])
-                        b_w = len(sub[sub.result == 2])
-                        diff = a_w - b_w
-                        if diff > 0: 
-                            return f"<b style='color:#ff4d4d; font-size:10px;'>{diff} UP</b>", f"<span style='color:#ccc; font-size:10px;'>{diff} DN</span>"
-                        elif diff < 0:
-                            return f"<span style='color:#ccc; font-size:10px;'>{abs(diff)} DN</span>", f"<b style='color:#007bff; font-size:10px;'>{abs(diff)} UP</b>"
-                        else:
-                            return "<b style='color:#777; font-size:10px;'>AS</b>", "<b style='color:#777; font-size:10px;'>AS</b>"
-        
-                    def draw_status_row(h_range):
-                        s_left, s_right = get_status_html(h_range)
-                        row_html = f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="width:40px; text-align:left;">{s_left}</div>'
-                        row_html += '<div style="display:flex; gap:2px;">'
-                        for h in h_range:
-                            res = m_data[m_data.hole == h].result.values
-                            bg = "#eee"
-                            if len(res) > 0:
-                                bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#bbb"
-                            row_html += f'<div style="width:8px; height:8px; background:{bg}; border-radius:50%;"></div>'
-                        row_html += f'</div><div style="width:40px; text-align:right;">{s_right}</div></div>'
-                        return row_html
-        
-                    for r in intervals:
-                        sub = m_data[m_data.hole.isin(r)]
-                        if not sub.empty:
-                            aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
-                            if aw == bw: pts_a += 0.5; pts_b += 0.5
-                            elif aw > bw: pts_a += 1.0
-                            else: pts_b += 1.0
-        
-                    p_a_disp = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
-                    p_b_disp = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
-        
-                    with row[j]:
-                        st.markdown(f"""
-                        <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <!-- Левая команда -->
-                                <div style="width:25%; text-align:left;">
-                                    <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
-                                    <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
-                                    <span style="font-size:9px; color:#666;">{p_a_disp}</span>
-                                </div>
-                                <!-- ЦЕНТРАЛЬНЫЙ ОГРОМНЫЙ СЧЕТ -->
-                                <div style="width:50%; text-align:center;">
-                                    <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
-                                        <span style="color:#ff4d4d;">{pts_a:g}</span>:<span style="color:#007bff;">{pts_b:g}</span>
-                                    </div>
-                                    <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
-                                </div>
-                                <!-- Правая команда -->
-                                <div style="width:25%; text-align:right;">
-                                    <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
-                                    <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
-                                    <span style="font-size:9px; color:#666;">{p_b_disp}</span>
-                                </div>
+    # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ ПО ЗАПРОСУ КЛИЕНТА)
+    unique_matches = df.match_id.unique()
+    for i in range(0, len(unique_matches), 2):
+        row = st.columns(2)
+        for j in range(2):
+            if i + j < len(unique_matches):
+                curr_m = unique_matches[i+j]
+                m_data = df[df.match_id == curr_m]
+                t_a_n, t_b_n = curr_m.split("_vs_")
+                
+                # Считаем очки матча (Match Points)
+                pts_a, pts_b = 0.0, 0.0
+                intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+                
+                def get_status_html(h_range):
+                    sub = m_data[m_data.hole.isin(h_range)]
+                    if sub.empty: return "<span></span>", "<span></span>"
+                    a_w = len(sub[sub.result == 1])
+                    b_w = len(sub[sub.result == 2])
+                    diff = a_w - b_w
+                    if diff > 0: 
+                        return f"<b style='color:#ff4d4d; font-size:10px;'>{diff} UP</b>", f"<span style='color:#ccc; font-size:10px;'>{diff} DN</span>"
+                    elif diff < 0:
+                        return f"<span style='color:#ccc; font-size:10px;'>{abs(diff)} DN</span>", f"<b style='color:#007bff; font-size:10px;'>{abs(diff)} UP</b>"
+                    else:
+                        return "<b style='color:#777; font-size:10px;'>AS</b>", "<b style='color:#777; font-size:10px;'>AS</b>"
+    
+                def draw_status_row(h_range):
+                    s_left, s_right = get_status_html(h_range)
+                    row_html = f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="width:40px; text-align:left;">{s_left}</div>'
+                    row_html += '<div style="display:flex; gap:2px;">'
+                    for h in h_range:
+                        res = m_data[m_data.hole == h].result.values
+                        bg = "#eee"
+                        if len(res) > 0:
+                            bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#bbb"
+                        row_html += f'<div style="width:8px; height:8px; background:{bg}; border-radius:50%;"></div>'
+                    row_html += f'</div><div style="width:40px; text-align:right;">{s_right}</div></div>'
+                    return row_html
+    
+                for r in intervals:
+                    sub = m_data[m_data.hole.isin(r)]
+                    if not sub.empty:
+                        aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
+                        if aw == bw: pts_a += 0.5; pts_b += 0.5
+                        elif aw > bw: pts_a += 1.0
+                        else: pts_b += 1.0
+    
+                p_a_disp = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
+                p_b_disp = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
+    
+                with row[j]:
+                    st.markdown(f"""
+                    <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <!-- Левая команда -->
+                            <div style="width:25%; text-align:left;">
+                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
+                                <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
+                                <span style="font-size:9px; color:#666;">{p_a_disp}</span>
                             </div>
-                            {draw_status_row(range(1, 10))}
-                            {draw_status_row(range(10, 19))}
-                            <div style="border-top:1px solid #eee; margin-top:8px; padding-top:8px;">
-                                {draw_status_row(range(1, 19))}
+                            <!-- ЦЕНТРАЛЬНЫЙ ОГРОМНЫЙ СЧЕТ -->
+                            <div style="width:50%; text-align:center;">
+                                <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
+                                    <span style="color:#ff4d4d;">{pts_a:g}</span>:<span style="color:#007bff;">{pts_b:g}</span>
+                                </div>
+                                <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
+                            </div>
+                            <!-- Правая команда -->
+                            <div style="width:25%; text-align:right;">
+                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
+                                <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
+                                <span style="font-size:9px; color:#666;">{p_b_disp}</span>
                             </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        {draw_status_row(range(1, 10))}
+                        {draw_status_row(range(10, 19))}
+                        <div style="border-top:1px solid #eee; margin-top:8px; padding-top:8px;">
+                            {draw_status_row(range(1, 19))}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
 # Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
