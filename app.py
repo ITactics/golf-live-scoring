@@ -356,17 +356,36 @@ if not df.empty:
     
                 def draw_status_row(h_range):
                     s_left, s_right = get_status_html(h_range)
-                    row_html = f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">{s_left}'
-                    row_html += '<div style="display:flex; gap:2px;">'
+                    # Внутренняя функция для создания ярких бейджей UP/DN
+                    def badge(text, side):
+                        if not text or "span" in text or text == "AS": 
+                            return f'<div style="color:#bbb; font-size:10px; font-weight:bold; width:35px; text-align:{"left" if side=="l" else "right"};">AS</div>' if text == "AS" else ""
+                        # Цвет бейджа зависит от того, кто ведет (UP)
+                        bg = "#ff4d4d" if "UP" in text and side == "l" else "#007bff" if "UP" in text and side == "r" else "#f0f0f0"
+                        color = "white" if "UP" in text else "#888"
+                        clean_text = text.replace("<b>","").replace("</b>","")
+                        return f'<div style="background:{bg}; color:{color}; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; min-width:38px; text-align:center; display:inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">{clean_text}</div>'
+
+                    row_html = f'''
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding: 4px 8px; background: rgba(0,0,0,0.03); border-radius:8px;">
+                        <div style="width:50px; text-align:left;">{badge(s_left, "l")}</div>
+                        <div style="display:flex; gap:3px; justify-content:center; flex-grow:1;">
+                    '''
                     for h in h_range:
                         res = m_data[m_data.hole == h].result.values
-                        bg = "#eee"
+                        bg = "#ddd" # Пустая лунка
                         if len(res) > 0:
-                            bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#bbb"
-                        row_html += f'<div style="width:8px; height:8px; background:{bg}; border-radius:50%;"></div>'
-                    row_html += f'</div>{s_right}</div>'
+                            bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#999"
+                        row_html += f'<div style="width:10px; height:10px; background:{bg}; border-radius:50%; border: 1px solid rgba(0,0,0,0.1);"></div>'
+                    
+                    row_html += f'''
+                        </div>
+                        <div style="width:50px; text-align:right;">{badge(s_right, "r")}</div>
+                    </div>
+                    '''
                     return row_html
-    
+
+                # Подсчет Match Points (твоя логика остается)
                 for r in intervals:
                     sub = m_data[m_data.hole.isin(r)]
                     if not sub.empty:
@@ -374,39 +393,45 @@ if not df.empty:
                         if aw == bw: pts_a += 0.5; pts_b += 0.5
                         elif aw > bw: pts_a += 1.0
                         else: pts_b += 1.0
-    
+
                 p_a_disp = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
                 p_b_disp = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
-    
+
+                # --- СТИЛЬНАЯ КАРТОЧКА ---
                 with row[j]:
                     st.markdown(f"""
-                    <div style="background:white; padding:12px; border-radius:10px; margin-bottom:15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 5px solid #ff4d4d; border-right: 5px solid #007bff;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <!-- Левая команда: Лого + Название -->
+                    <div style="background:white; padding:18px; border-radius:18px; margin-bottom:20px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; position:relative; color: black !important;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                            <!-- Левая команда -->
                             <div style="width:35%; text-align:left;">
-                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="30"><br>
-                                <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
-                                <span style="font-size:9px; color:#555;">{p_a_disp}</span>
+                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="42" style="filter: drop-shadow(0 3px 5px rgba(0,0,0,0.15));"><br>
+                                <b style="color:#ff4d4d; font-size:15px; text-transform:uppercase; display:block; margin-top:5px;">{t_a_n}</b>
+                                <span style="font-size:10px; color:#777; font-weight:500;">{p_a_disp}</span>
                             </div>
-                            <!-- Центр: Очки матча -->
-                            <div style="width:30%; text-align:center;">
-                                <h2 style="margin:0; color:black !important; font-size:24px;">{pts_a:g}:{pts_b:g}</h2>
+                            <!-- Центр: Акцентный счет -->
+                            <div style="width:30%; text-align:center; background:#f0f2f6; border-radius:12px; padding:8px; border:1px solid #e0e0e0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                                <div style="font-size:32px; font-weight:900; color:#111; letter-spacing:-1px; line-height:1;">{pts_a:g}:{pts_b:g}</div>
+                                <div style="font-size:9px; color:#888; font-weight:bold; letter-spacing:1.5px; margin-top:4px;">POINTS</div>
                             </div>
-                            <!-- Правая команда: Лого + Название -->
+                            <!-- Правая команда -->
                             <div style="width:35%; text-align:right;">
-                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="30"><br>
-                                <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
-                                <span style="font-size:9px; color:#555;">{p_b_disp}</span>
+                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="42" style="filter: drop-shadow(0 3px 5px rgba(0,0,0,0.15));"><br>
+                                <b style="color:#007bff; font-size:15px; text-transform:uppercase; display:block; margin-top:5px;">{t_b_n}</b>
+                                <span style="font-size:10px; color:#777; font-weight:500;">{p_b_disp}</span>
                             </div>
                         </div>
+                        
+                        <!-- Строки с кружками и бейджами -->
                         {draw_status_row(range(1, 10))}
                         {draw_status_row(range(10, 19))}
-                        <div style="border-top:1px solid #eee; margin-top:5px; padding-top:5px;">
+                        
+                        <!-- Нижний блок (Общий итог) -->
+                        <div style="margin-top:12px; padding-top:12px; border-top: 2px dashed #ddd;">
                             {draw_status_row(range(1, 19))}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-
+                    
 # Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     demo = []
