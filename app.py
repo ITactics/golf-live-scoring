@@ -327,7 +327,7 @@ if not df.empty:
 
     st.markdown("---")
 
-    # 2. КАРТОЧКИ МАТЧЕЙ (С добавлением статуса UP/DN)
+    # 2. КАРТОЧКИ МАТЧЕЙ (С добавлением статуса UP/DN и ЛОГО)
     unique_matches = df.match_id.unique()
     for i in range(0, len(unique_matches), 2):
         row = st.columns(2)
@@ -353,7 +353,7 @@ if not df.empty:
                         return f"<b style='color:#ccc; font-size:10px;'>{abs(diff)} DN</b>", f"<b style='color:#007bff; font-size:10px;'>{abs(diff)} UP</b>"
                     else:
                         return "<b style='color:#777; font-size:10px;'>AS</b>", "<b style='color:#777; font-size:10px;'>AS</b>"
-
+    
                 def draw_status_row(h_range):
                     s_left, s_right = get_status_html(h_range)
                     row_html = f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">{s_left}'
@@ -366,8 +366,7 @@ if not df.empty:
                         row_html += f'<div style="width:8px; height:8px; background:{bg}; border-radius:50%;"></div>'
                     row_html += f'</div>{s_right}</div>'
                     return row_html
-
-                # Считаем итоговые очки для центрального счета
+    
                 for r in intervals:
                     sub = m_data[m_data.hole.isin(r)]
                     if not sub.empty:
@@ -375,22 +374,29 @@ if not df.empty:
                         if aw == bw: pts_a += 0.5; pts_b += 0.5
                         elif aw > bw: pts_a += 1.0
                         else: pts_b += 1.0
-
+    
                 p_a_disp = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
                 p_b_disp = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
-
+    
                 with row[j]:
                     st.markdown(f"""
                     <div style="background:white; padding:12px; border-radius:10px; margin-bottom:15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 5px solid #ff4d4d; border-right: 5px solid #007bff;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="width:30%; text-align:left;">
-                                <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br><span style="font-size:9px; color:#555;">{p_a_disp}</span>
+                            <!-- Левая команда: Лого + Название -->
+                            <div style="width:35%; text-align:left;">
+                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="30"><br>
+                                <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
+                                <span style="font-size:9px; color:#555;">{p_a_disp}</span>
                             </div>
-                            <div style="width:40%; text-align:center;">
-                                <h2 style="margin:0; color:black !important; font-size:24px;">{pts_a:g} : {pts_b:g}</h2>
+                            <!-- Центр: Очки матча -->
+                            <div style="width:30%; text-align:center;">
+                                <h2 style="margin:0; color:black !important; font-size:24px;">{pts_a:g}:{pts_b:g}</h2>
                             </div>
-                            <div style="width:30%; text-align:right;">
-                                <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br><span style="font-size:9px; color:#555;">{p_b_disp}</span>
+                            <!-- Правая команда: Лого + Название -->
+                            <div style="width:35%; text-align:right;">
+                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="30"><br>
+                                <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
+                                <span style="font-size:9px; color:#555;">{p_b_disp}</span>
                             </div>
                         </div>
                         {draw_status_row(range(1, 10))}
