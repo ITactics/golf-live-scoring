@@ -353,7 +353,7 @@ if not df.empty:
     with c1: st.table(ldf.iloc[:mid].set_index('МЕСТО'))
     with c2: st.table(ldf.iloc[mid:].set_index('МЕСТО'))
 
-st.markdown("---")
+    st.markdown("---")
 
     # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
     unique_matches = df.match_id.unique()
