@@ -311,35 +311,51 @@ if not df.empty:
                 
                 s_a = len(m_data[m_data.result == 1])
                 s_b = len(m_data[m_data.result == 2])
+
+                # ФУНКЦИЯ ДЛЯ КРУГЛЯШКОВ ВНУТРИ КАРТОЧКИ
+                def draw_mini_row(m_df):
+                    row_html = '<div style="display:flex; justify-content:center; gap:3px; margin-top:10px; margin-bottom:5px;">'
+                    for h in range(1, 19):
+                        res = m_df[m_df.hole == h].result.values
+                        bg = "#eeeeee" # Пустая лунка
+                        if len(res) > 0:
+                            # 1 - Синий, 2 - Красный, 0 - Серый
+                            bg = "#007bff" if res[0] == 1 else "#ff4d4d" if res[0] == 2 else "#bbbbbb"
+                        row_html += f'<div style="width:10px; height:10px; background:{bg}; border-radius:50%; border:0.5px solid #999;"></div>'
+                    return row_html + '</div>'
                 
-                # Расчет UP/DN для центра карточки
                 diff = s_a - s_b
                 if diff > 0: status_info = f"{diff} UP {t_a_n}"
                 elif diff < 0: status_info = f"{abs(diff)} UP {t_b_n}"
                 else: status_info = "ALL SQUARE"
 
-                p_a_display = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
-                p_b_display = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
+                p_a_display = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Игрок А1/А2"
+                p_b_display = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Игрок Б1/Б2"
 
                 with row[j]:
                     st.markdown(f"""
-                    <div class="match-card-container" style="background:white; padding:15px; border-radius:15px; display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-left: 8px solid #007bff; border-right: 8px solid #ff4d4d;">
-                        <div style="text-align:center; width:33%;">
-                            <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="45"><br>
-                            <b style="font-size: 14px; color:#007bff !important;">{t_a_n}</b><br>
-                            <span style="font-size: 10px; color:#555 !important;">{p_a_display}</span>
+                    <div class="match-card-container" style="background:white; padding:12px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-left: 8px solid #007bff; border-right: 8px solid #ff4d4d;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <!-- Команда А (Синий текст) -->
+                            <div style="text-align:center; width:33%;">
+                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="40"><br>
+                                <b style="font-size: 13px; color:#007bff !important;">{t_a_n}</b><br>
+                                <span style="font-size: 9px; color:#555 !important;">{p_a_display}</span>
+                            </div>
+                            <!-- Счет -->
+                            <div style="text-align:center; width:34%;">
+                                <h1 style="color:black !important; margin:0; font-size:28px; line-height:1;">{s_a}:{s_b}</h1>
+                                <div style="font-size:10px; font-weight:bold; color:#333 !important; text-transform:uppercase;">{status_info}</div>
+                            </div>
+                            <!-- Команда Б (Красный текст) -->
+                            <div style="text-align:center; width:33%;">
+                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="40"><br>
+                                <b style="font-size: 13px; color:#ff4d4d !important;">{t_b_n}</b><br>
+                                <span style="font-size: 9px; color:#555 !important;">{p_b_display}</span>
+                            </div>
                         </div>
-                        <div style="text-align:center; width:34%;">
-                            <h1 style="color:black !important; margin:0; font-size:32px;">
-                                <span style="color:#007bff !important;">{s_a}</span>:<span style="color:#ff4d4d !important;">{s_b}</span>
-                            </h1>
-                            <div style="font-size:11px; font-weight:bold; color:#333 !important; text-transform:uppercase;">{status_info}</div>
-                        </div>
-                        <div style="text-align:center; width:33%;">
-                            <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="45"><br>
-                            <b style="font-size: 14px; color:#ff4d4d !important;">{t_b_n}</b><br>
-                            <span style="font-size: 10px; color:#555 !important;">{p_b_display}</span>
-                        </div>
+                        <!-- Те самые кругляшки -->
+                        {draw_mini_row(m_data)}
                     </div>
                     """, unsafe_allow_html=True)
 
