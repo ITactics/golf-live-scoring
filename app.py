@@ -358,7 +358,7 @@ if not df.empty:
     
     # with c1: st.table(ldf.iloc[:mid].reset_index(drop=True))
     # with c2: st.table(ldf.iloc[mid:].reset_index(drop=True))
-    st.dataframe(ldf.reset_index(drop=True), use_container_width=True)
+    st.dataframe(ldf.style.hide(axis="index"), use_container_width=True)
 
     st.markdown("---")
 
