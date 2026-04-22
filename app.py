@@ -236,10 +236,12 @@ if not m_df.empty:
     l_col, m_col, r_col = st.columns([2, 5, 2])
     with l_col:
         st.image(get_base64_image(f"logo_{team_a}.png"), width=80)
-        st.subheader(team_a); st.write(p_a)
+        # Название левой команды КРАСНЫМ
+        st.markdown(f"<h3 style='color:#ff4d4d !important;'>{team_a}</h3><p>{p_a}</p>", unsafe_allow_html=True)
     with r_col:
         st.markdown(f"<div style='text-align:right;'><img src='{get_base64_image(f'logo_{team_b}.png')}' width='80'></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align:right;'><h3>{team_b}</h3><p>{p_b}</p></div>", unsafe_allow_html=True)
+        # Название правой команды СИНИМ
+        st.markdown(f"<div style='text-align:right;'><h3 style='color:#007bff !important;'>{team_b}</h3><p>{p_b}</p></div>", unsafe_allow_html=True)
     with m_col:
         def draw_row(h_range):
             html = '<div style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">'
@@ -247,8 +249,8 @@ if not m_df.empty:
                 res = m_df[m_df.hole == h].result.values
                 bg = "#444"
                 if len(res) > 0: 
-                    # ЗАМЕНА: 1 (Команда А) теперь синий #007bff
-                    bg = "#007bff" if res[0] == 1 else "#ff4d4d" if res[0] == 2 else "#888"
+                    # ИСПРАВЛЕНО: 1 — Красный (Команда А), 2 — Синий (Команда Б)
+                    bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#888"
                 html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:white;">{h}</div>'
             return html + '</div>'
             
@@ -256,12 +258,12 @@ if not m_df.empty:
         st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
         
         a_w, b_w = len(m_df[m_df.result == 1]), len(m_df[m_df.result == 2])
-        # ЗАМЕНА: Раскрашиваем цифры счета в синий и красный
+        # ИСПРАВЛЕНО: Левая цифра КРАСНАЯ, правая СИНЯЯ
         st.markdown(f"""
             <h1 style='text-align:center; font-size:60px; margin:0;'>
-                <span style='color:#007bff;'>{a_w}</span> 
+                <span style='color:#ff4d4d;'>{a_w}</span> 
                 <span style='color:white;'>:</span> 
-                <span style='color:#ff4d4d;'>{b_w}</span>
+                <span style='color:#007bff;'>{b_w}</span>
             </h1>
         """, unsafe_allow_html=True)
 
