@@ -392,28 +392,30 @@ if not df.empty:
     
                 with row[j]:
                     st.markdown(f"""
-                    <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
+                    <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <!-- Левая команда -->
                             <div style="width:25%; text-align:left;">
                                 <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
-                                <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
-                                <span style="font-size:9px; color:#666;">{p_a_disp}</span>
+                                <b style="color:#ff4d4d !important; font-size:12px; display:block;">{t_a_n}</b>
+                                <span style="font-size:9px; color:#555 !important; display:block;">{p_a_disp}</span>
                             </div>
-                             <!-- ЦЕНТРАЛЬНЫЙ СЧЕТ -->
+                            
+                            <!-- ЦЕНТРАЛЬНЫЙ СЧЕТ -->
                             <div style="width:50%; text-align:center;">
-                                <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
-                                    <span style="color:#ff4d4d !important;">{pts_a:g}</span>
-                                    <span style="color:black !important; display:inline-block; padding: 0 2px;">:</span>
-                                    <span style="color:#007bff !important;">{pts_b:g}</span>
+                                <div style="display:flex; justify-content:center; align-items:center; gap:5px;">
+                                    <span style="font-size:46px; font-weight:900; color:#ff4d4d !important; line-height:1;">{pts_a:g}</span>
+                                    <span style="font-size:40px; font-weight:900; color:black !important; line-height:1;">:</span>
+                                    <span style="font-size:46px; font-weight:900; color:#007bff !important; line-height:1;">{pts_b:g}</span>
                                 </div>
-                                <div style="font-size:9px; font-weight:bold; color:#777 !important; text-transform:uppercase;">Match Points</div>
+                                <div style="font-size:10px; font-weight:bold; color:#888 !important; text-transform:uppercase; margin-top:2px;">Match Points</div>
                             </div>
+                            
                             <!-- Правая команда -->
                             <div style="width:25%; text-align:right;">
                                 <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
-                                <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
-                                <span style="font-size:9px; color:#666;">{p_b_disp}</span>
+                                <b style="color:#007bff !important; font-size:12px; display:block;">{t_b_n}</b>
+                                <span style="font-size:9px; color:#555 !important; display:block;">{p_b_disp}</span>
                             </div>
                         </div>
                         {draw_status_row(range(1, 10))}
@@ -424,7 +426,6 @@ if not df.empty:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    
 # Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     demo = []
