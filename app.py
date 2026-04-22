@@ -192,14 +192,40 @@ def save_result(val):
     time.sleep(0.3)
     st.rerun()
 
-# Кнопки ввода (Цвета теперь Красный и Синий)
+# Кнопки ввода (Красная слева, Синяя справа + стили для яркости)
+st.markdown("""
+<style>
+/* Красная кнопка (Команда А) */
+div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] {
+    background-color: #ff4d4d !important;
+    color: white !important;
+    border: none;
+}
+/* Синяя кнопка (Команда Б) */
+div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] {
+    background-color: #007bff !important;
+    color: white !important;
+    border: none;
+}
+/* Серая кнопка (Ничья) */
+div[data-testid="stHorizontalBlock"] button[key="draw_btn"] {
+    background-color: #555555 !important;
+    color: white !important;
+    border: none;
+}
+</style>
+""", unsafe_allow_html=True)
+
 c1, c2, c3 = st.columns(3)
 with c1: 
-    if st.button(f"🔵 {team_a}", use_container_width=True, key="win_a_btn"): save_result(1)
+    if st.button(f"🔴 {team_a}", use_container_width=True, key="win_a_btn"): 
+        save_result(1)
 with c2: 
-    if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"): save_result(0)
+    if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"): 
+        save_result(0)
 with c3: 
-    if st.button(f"🔴 {team_b}", use_container_width=True, key="win_b_btn"): save_result(2)
+    if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"): 
+        save_result(2)
 
 # ======================
 # 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
