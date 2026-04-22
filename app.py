@@ -257,14 +257,31 @@ if not m_df.empty:
         st.markdown(draw_row(range(1, 10)), unsafe_allow_html=True)
         st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
         
-        a_w, b_w = len(m_df[m_df.result == 1]), len(m_df[m_df.result == 2])
-        # ИСПРАВЛЕНО: Левая цифра КРАСНАЯ, правая СИНЯЯ
+        # --- НОВАЯ ЛОГИКА: СЧИТАЕМ ТУРНИРНЫЕ ОЧКИ (MATCH POINTS) ---
+        main_pts_a, main_pts_b = 0.0, 0.0
+        intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+        
+        for r in intervals:
+            subset = m_df[m_df.hole.isin(r)]
+            if not subset.empty:
+                aw, bw = len(subset[subset.result==1]), len(subset[subset.result==2])
+                if aw == bw:
+                    main_pts_a += 0.5; main_pts_b += 0.5
+                elif aw > bw:
+                    main_pts_a += 1.0
+                else:
+                    main_pts_b += 1.0
+
+        # ВЫВОДИМ ОЧКИ МАТЧА (Красный слева, Синий справа)
         st.markdown(f"""
-            <h1 style='text-align:center; font-size:60px; margin:0;'>
-                <span style='color:#ff4d4d;'>{a_w}</span> 
-                <span style='color:white;'>:</span> 
-                <span style='color:#007bff;'>{b_w}</span>
-            </h1>
+            <div style='text-align:center;'>
+                <h1 style='font-size:80px; margin:0; line-height:1; font-weight:bold;'>
+                    <span style='color:#ff4d4d;'>{main_pts_a:g}</span> 
+                    <span style='color:white;'>:</span> 
+                    <span style='color:#007bff;'>{main_pts_b:g}</span>
+                </h1>
+                <p style='color:#aaa; font-weight:bold; letter-spacing:2px; margin-top:5px; font-size:14px; text-transform:uppercase;'>Match Points</p>
+            </div>
         """, unsafe_allow_html=True)
 
 # ======================
