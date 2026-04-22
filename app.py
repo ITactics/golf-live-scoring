@@ -355,8 +355,9 @@ if not df.empty:
     c1, c2 = st.columns(2)
     mid = (len(ldf) + 1) // 2
     
-    with c1: st.table(ldf.iloc[:mid])
-    with c2: st.table(ldf.iloc[mid:])
+    
+    with c1: st.table(ldf.iloc[:mid].reset_index(drop=True))
+    with c2: st.table(ldf.iloc[mid:].reset_index(drop=True))
 
     st.markdown("---")
 
