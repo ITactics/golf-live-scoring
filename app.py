@@ -161,7 +161,22 @@ if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all
 # ВВОД МАРКЕРА
 # ======================
 st.header("📱 Ввод результатов (Маркер)")
-hole = st.selectbox("Выберите лунку:", list(range(1, 19)), key="hole_sel")
+
+if 'hole_num' not in st.session_state:
+    st.session_state.hole_num = 1
+
+# Кнопки переключения лунок без клавиатуры
+ch1, ch2, ch3 = st.columns([1, 2, 1])
+with ch1:
+    if st.button("➖", use_container_width=True):
+        st.session_state.hole_num = max(1, st.session_state.hole_num - 1)
+with ch2:
+    st.markdown(f"<h2 style='text-align:center; margin:0;'>Лунка {st.session_state.hole_num}</h2>", unsafe_allow_html=True)
+with ch3:
+    if st.button("➕", use_container_width=True):
+        st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
+
+hole = st.session_state.hole_num
 match_id = f"{team_a}_vs_{team_b}"
 
 def save_result(val):
@@ -171,16 +186,20 @@ def save_result(val):
     df = pd.concat([df[~mask], new_data]).sort_values("hole")
     df.to_csv(FILE, index=False)
     st.toast(f"Лунка {hole} записана!")
-    time.sleep(0.4)
+    # Авто-переход на следующую лунку
+    if st.session_state.hole_num < 18:
+        st.session_state.hole_num += 1
+    time.sleep(0.3)
     st.rerun()
 
+# Кнопки ввода (Цвета теперь Красный и Синий)
 c1, c2, c3 = st.columns(3)
 with c1: 
-    if st.button(f"🏆 {team_a}", use_container_width=True, key="win_a_btn"): save_result(1)
+    if st.button(f"🔵 {team_a}", use_container_width=True, key="win_a_btn"): save_result(1)
 with c2: 
     if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"): save_result(0)
 with c3: 
-    if st.button(f"🏆 {team_b}", use_container_width=True, key="win_b_btn"): save_result(2)
+    if st.button(f"🔴 {team_b}", use_container_width=True, key="win_b_btn"): save_result(2)
 
 # ======================
 # 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
