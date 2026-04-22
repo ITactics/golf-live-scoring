@@ -246,43 +246,50 @@ st.markdown("---")
 st.title("📋 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
-    # 1. ТАБЛИЦА РЕЙТИНГА (Подсчет по Match Play: 9-9-18)
-        # 1. ТАБЛИЦА РЕЙТИНГА (ИСПРАВЛЕННЫЙ ПОДСЧЕТ)
+    # 1. ТАБЛИЦА РЕЙТИНГА (С ДЕТАЛИЗАЦИЕЙ)
     stats = []
     for t in st.session_state.team_list:
         total_points = 0.0
-        # Ищем все матчи команды
+        details = []  # Список для хранения отдельных баллов (1 или 0.5)
         m_ids = df[df.match_id.str.contains(t)].match_id.unique()
         
         for m_id in m_ids:
             m_data = df[df.match_id == m_id]
             t_a, t_b = m_id.split("_vs_")
             
-            # Интервалы (9-9-18 или 6-6-6-18)
             intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
             
             for h_range in intervals:
                 subset = m_data[m_data.hole.isin(h_range)]
-                if subset.empty: continue # Пропускаем, если лунки еще не игрались
+                if subset.empty: continue 
                 
                 a_w = len(subset[subset.result == 1])
                 b_w = len(subset[subset.result == 2])
                 
-                # Очки: 1 за победу, 0.5 за ничью
+                # Логика начисления
+                p = 0.0
                 if a_w == b_w:
-                    total_points += 0.5
+                    p = 0.5
                 elif (t == t_a and a_w > b_w) or (t == t_b and b_w > a_w):
-                    total_points += 1.0
+                    p = 1.0
+                
+                if p > 0:
+                    total_points += p
+                    details.append(f"{p:g}") # Добавляем "1" или "0.5" в список
         
-        stats.append({"Команда": t, "Очки": total_points})
+        # Собираем строку вида: "2.5 (1+0.5+1)"
+        points_str = f"{total_points:g}"
+        det_str = f"({'+'.join(details)})" if details else ""
+        
+        stats.append({
+            "Команда": t, 
+            "Очки": points_str, 
+            "Детали": det_str
+        })
     
     ldf = pd.DataFrame(stats).sort_values("Очки", ascending=False)
-    ldf = ldf.reset_index(drop=True) # Очищаем старые индексы
-    ldf.index += 1                  # Делаем так, чтобы места начинались с 1
-
-    
-    # ЭТА СТРОЧКА УБИРАЕТ ЛИШНИЕ НУЛИ (2.5000 -> 2.5)
-    ldf["Очки"] = ldf["Очки"].apply(lambda x: f"{x:g}") 
+    ldf = ldf.reset_index(drop=True)
+    ldf.index += 1
     
     # ВЫВОД ТАБЛИЦЫ В ДВЕ КОЛОНКИ
     c_tab1, c_tab2 = st.columns(2)
