@@ -44,15 +44,30 @@ else:
 # ======================
 st.markdown("""
 <style>
+/* Основной фон и контейнер */
 .stApp { background: url("https://unsplash.com"); background-size: cover; }
 .block-container { background: rgba(0, 0, 0, 0.75); padding: 30px; border-radius: 20px; }
 
-/* Белым красим только обычный текст и подписи, заголовки не трогаем */
-p, label, span { color: white; }
+/* Общий текст приложения — БЕЛЫЙ */
+h1, h2, h3, p, label, span { color: white !important; }
 
-/* Внутри карточек принудительно ставим черный цвет по умолчанию */
-.match-card-container, .match-card-container * {
-    color: black;
+/* ВСЁ ВНУТРИ КАРТОЧЕК — ПРИНУДИТЕЛЬНО ЧЕРНОЕ (кроме того, что мы сами покрасим) */
+[data-testid="stMarkdownContainer"] div[style*="background:white"] * {
+    color: black !important;
+}
+
+/* Возвращаем цвета нашим цифрам счета, чтобы их не закрасило черным */
+[data-testid="stMarkdownContainer"] div[style*="background:white"] span[style*="color:#ff4d4d"] {
+    color: #ff4d4d !important;
+}
+[data-testid="stMarkdownContainer"] div[style*="background:white"] span[style*="color:#007bff"] {
+    color: #007bff !important;
+}
+[data-testid="stMarkdownContainer"] div[style*="background:white"] b[style*="color:#ff4d4d"] {
+    color: #ff4d4d !important;
+}
+[data-testid="stMarkdownContainer"] div[style*="background:white"] b[style*="color:#007bff"] {
+    color: #007bff !important;
 }
 </style>
 """, unsafe_allow_html=True)
