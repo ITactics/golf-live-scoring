@@ -399,17 +399,20 @@ if not df.empty:
                     st.markdown(f"""
                     <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <!-- Левая команда -->
                             <div style="width:25%; text-align:left;">
                                 <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
                                 <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
                                 <span style="font-size:9px; color:#666;">{p_a_disp}</span>
                             </div>
+                            <!-- ЦЕНТРАЛЬНЫЙ СЧЕТ (ИСПРАВЛЕН ЦВЕТ ДВОЕТОЧИЯ) -->
                             <div style="width:50%; text-align:center;">
                                 <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
-                                    <span style="color:#ff4d4d;">{pts_a:g}</span>:<span style="color:#007bff;">{pts_b:g}</span>
+                                    <span style="color:#ff4d4d;">{pts_a:g}</span><span style="color:black !important;">:</span><span style="color:#007bff;">{pts_b:g}</span>
                                 </div>
                                 <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
                             </div>
+                            <!-- Правая команда -->
                             <div style="width:25%; text-align:right;">
                                 <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
                                 <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
@@ -423,6 +426,7 @@ if not df.empty:
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+
                     
 # Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
