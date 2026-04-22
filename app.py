@@ -352,12 +352,13 @@ if not df.empty:
     ldf = ldf.drop(columns=["POINTS"])
     
     # Вывод в две колонки (как на скриншоте)
-    c1, c2 = st.columns(2)
-    mid = (len(ldf) + 1) // 2
+    # c1, c2 = st.columns(2)
+    # mid = (len(ldf) + 1) // 2
     
     
-    with c1: st.table(ldf.iloc[:mid].reset_index(drop=True))
-    with c2: st.table(ldf.iloc[mid:].reset_index(drop=True))
+    # with c1: st.table(ldf.iloc[:mid].reset_index(drop=True))
+    # with c2: st.table(ldf.iloc[mid:].reset_index(drop=True))
+    st.dataframe(ldf.reset_index(drop=True), use_container_width=True)
 
     st.markdown("---")
 
