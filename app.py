@@ -220,13 +220,24 @@ if not m_df.empty:
             for h in h_range:
                 res = m_df[m_df.hole == h].result.values
                 bg = "#444"
-                if len(res) > 0: bg = "#00ff88" if res[0] == 1 else "#ff4d4d" if res[0] == 2 else "#888"
-                html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:10px;">{h}</div>'
+                if len(res) > 0: 
+                    # ЗАМЕНА: 1 (Команда А) теперь синий #007bff
+                    bg = "#007bff" if res[0] == 1 else "#ff4d4d" if res[0] == 2 else "#888"
+                html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:white;">{h}</div>'
             return html + '</div>'
+            
         st.markdown(draw_row(range(1, 10)), unsafe_allow_html=True)
         st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
+        
         a_w, b_w = len(m_df[m_df.result == 1]), len(m_df[m_df.result == 2])
-        st.markdown(f"<h1 style='text-align:center; font-size:60px;'>{a_w} : {b_w}</h1>", unsafe_allow_html=True)
+        # ЗАМЕНА: Раскрашиваем цифры счета в синий и красный
+        st.markdown(f"""
+            <h1 style='text-align:center; font-size:60px; margin:0;'>
+                <span style='color:#007bff;'>{a_w}</span> 
+                <span style='color:white;'>:</span> 
+                <span style='color:#ff4d4d;'>{b_w}</span>
+            </h1>
+        """, unsafe_allow_html=True)
 
 # ======================
 # ОБЩАЯ СТАТИСТИКА (LEADERBOARD + CARDS)
