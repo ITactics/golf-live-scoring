@@ -5,11 +5,18 @@ import time
 import base64
 import random
 import json
+from streamlit_autorefresh import st_autorefresh
+
+# ======================
+# 0. АВТООБНОВЛЕНИЕ (раз в 30 секунд)
+# ======================
+st_autorefresh(interval=30 * 1000, key="datarefresh")
 
 # ======================
 # 1. СИСТЕМНЫЕ НАСТРОЙКИ
 # ======================
 st.set_page_config(page_title="Golf TV Live", layout="wide")
+
 
 FILE = "tournament_results.csv"
 TEAMS_FILE = "teams_list.txt"
