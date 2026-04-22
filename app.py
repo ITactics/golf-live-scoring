@@ -406,7 +406,9 @@ if not df.empty:
                             </div>
                             <div style="width:50%; text-align:center;">
                                 <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
-                                    <span style="color:#ff4d4d;">{pts_a:g}</span>:<span style="color:#007bff;">{pts_b:g}</span>
+                                    <span style="color:#ff4d4d;">{pts_a:g}</span>
+                                    <span style="color:#000;">:</span>
+                                    <span style="color:#007bff;">{pts_b:g}</span>
                                 </div>
                                 <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
                             </div>
