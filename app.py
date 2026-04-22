@@ -46,11 +46,13 @@ st.markdown("""
 <style>
 .stApp { background: url("https://unsplash.com"); background-size: cover; }
 .block-container { background: rgba(0, 0, 0, 0.75); padding: 30px; border-radius: 20px; }
-h1, h2, h3, p, label { color: white !important; }
 
-/* Убираем принудительный черный цвет, чтобы цвета из карточек (красный/синий) работали */
-.match-card-container b, .match-card-container span, .match-card-container div {
-    /* Здесь больше нет принудительного черного цвета для всего подряд */
+/* Белым красим только обычный текст и подписи, заголовки не трогаем */
+p, label, span { color: white; }
+
+/* Внутри карточек принудительно ставим черный цвет по умолчанию */
+.match-card-container, .match-card-container * {
+    color: black;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -405,12 +407,14 @@ if not df.empty:
                                 <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
                                 <span style="font-size:9px; color:#666;">{p_a_disp}</span>
                             </div>
-                            <!-- ЦЕНТРАЛЬНЫЙ СЧЕТ (ИСПРАВЛЕН ЦВЕТ ДВОЕТОЧИЯ) -->
+                             <!-- ЦЕНТРАЛЬНЫЙ СЧЕТ -->
                             <div style="width:50%; text-align:center;">
                                 <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
-                                    <span style="color:#ff4d4d;">{pts_a:g}</span><span style="color:black !important;">:</span><span style="color:#007bff;">{pts_b:g}</span>
+                                    <span style="color:#ff4d4d !important;">{pts_a:g}</span>
+                                    <span style="color:black !important; display:inline-block; padding: 0 2px;">:</span>
+                                    <span style="color:#007bff !important;">{pts_b:g}</span>
                                 </div>
-                                <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
+                                <div style="font-size:9px; font-weight:bold; color:#777 !important; text-transform:uppercase;">Match Points</div>
                             </div>
                             <!-- Правая команда -->
                             <div style="width:25%; text-align:right;">
