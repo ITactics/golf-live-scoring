@@ -47,6 +47,11 @@ st.markdown("""
 .stApp { background: url("https://unsplash.com"); background-size: cover; }
 .block-container { background: rgba(0, 0, 0, 0.75); padding: 30px; border-radius: 20px; }
 h1, h2, h3, p, label { color: white !important; }
+
+/* Убираем принудительный черный цвет, чтобы цвета из карточек (красный/синий) работали */
+.match-card-container b, .match-card-container span, .match-card-container div {
+    /* Здесь больше нет принудительного черного цвета для всего подряд */
+}
 </style>
 """, unsafe_allow_html=True)
 
