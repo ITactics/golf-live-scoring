@@ -338,13 +338,18 @@ if not df.empty:
         summary.append({
             "КОМАНДА": t,
             "МАТЧИ": f"Завершено {len(m_ids)} из 3",
+            "POINTS": t_pts,  # 👈 ДОБАВИЛИ (важно)
             "ИТОГ": f"{t_pts:g} {det_str}",
             "U/D": t_ud
         })
 
     # Сортировка: Сначала по очкам (ИТОГ), затем по разнице лунок (U/D)
-    ldf = pd.DataFrame(summary).sort_values(by=["ИТОГ", "U/D"], ascending=False)
+    ldf = pd.DataFrame(summary).sort_values(
+        by=["POINTS", "U/D"],
+        ascending=False
+    )
     ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
+    ldf = ldf.drop(columns=["POINTS"])
     
     # Вывод в две колонки (как на скриншоте)
     c1, c2 = st.columns(2)
