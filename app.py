@@ -48,9 +48,9 @@ st.markdown("""
 .block-container { background: rgba(0, 0, 0, 0.75); padding: 30px; border-radius: 20px; }
 h1, h2, h3, p, label { color: white !important; }
 
-/* Принудительный черный текст внутри белых карточек */
-.match-card-container * {
-    color: #000000 !important;
+/* Убираем принудительный черный цвет, чтобы цвета из карточек (красный/синий) работали */
+.match-card-container b, .match-card-container span, .match-card-container div {
+    /* Здесь больше нет принудительного черного цвета для всего подряд */
 }
 </style>
 """, unsafe_allow_html=True)
@@ -344,7 +344,7 @@ if not df.empty:
 
     st.markdown("---")
 
-    # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ ПО ЗАПРОСУ КЛИЕНТА)
+    # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
     unique_matches = df.match_id.unique()
     for i in range(0, len(unique_matches), 2):
         row = st.columns(2)
@@ -399,20 +399,17 @@ if not df.empty:
                     st.markdown(f"""
                     <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <!-- Левая команда -->
                             <div style="width:25%; text-align:left;">
                                 <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
                                 <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
                                 <span style="font-size:9px; color:#666;">{p_a_disp}</span>
                             </div>
-                            <!-- ЦЕНТРАЛЬНЫЙ ОГРОМНЫЙ СЧЕТ -->
                             <div style="width:50%; text-align:center;">
                                 <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
                                     <span style="color:#ff4d4d;">{pts_a:g}</span>:<span style="color:#007bff;">{pts_b:g}</span>
                                 </div>
                                 <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
                             </div>
-                            <!-- Правая команда -->
                             <div style="width:25%; text-align:right;">
                                 <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
                                 <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
