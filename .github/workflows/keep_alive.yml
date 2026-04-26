@@ -1,0 +1,12 @@
+name: Keep App Alive
+on:
+  schedule:
+    - cron: '*/15 * * * *' 
+  workflow_dispatch: 
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up app
+        run: curl -I https://golf-live-scoring-jxrapw4dnjpqhtiefuarz2.streamlit.app/
