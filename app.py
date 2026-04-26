@@ -152,15 +152,41 @@ else:
 
 format_type = st.sidebar.selectbox("Формат зачета", ["9-9-18", "6-6-6-18"], key="fmt_sel")
 
-# Скачивание и сброс
+# ======================
+# СИСТЕМА СПАСЕНИЯ ДАННЫХ
+# ======================
 st.sidebar.markdown("---")
-if not df.empty:
-    csv = df.to_csv(index=False).encode('utf-8-sig')
-    st.sidebar.download_button("📥 Скачать CSV", data=csv, file_name='golf_results.csv', mime='text/csv')
+st.sidebar.subheader("💾 Работа с данными")
 
+# 1. Скачивание (Бэкап)
+if not df.empty:
+    csv_data = df.to_csv(index=False).encode('utf-8-sig')
+    st.sidebar.download_button(
+        label="📥 Скачать CSV (Бэкап)",
+        data=csv_data,
+        file_name='golf_results.csv',
+        mime='text/csv',
+        help="Скачайте файл в конце дня, чтобы данные не пропали!"
+    )
+
+# 2. Загрузка (Восстановление)
+up_file = st.sidebar.file_uploader("🔄 Восстановить из файла", type="csv", help="Загрузите скачанный ранее файл, если данные обнулились")
+if up_file:
+    try:
+        restored_df = pd.read_csv(up_file)
+        restored_df.to_csv(FILE, index=False)
+        st.sidebar.success("Данные успешно возвращены!")
+        time.sleep(1)
+        st.rerun()
+    except Exception as e:
+        st.sidebar.error("Ошибка в файле!")
+
+# 3. Безопасный сброс
+st.sidebar.markdown("---")
 if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all_btn"):
+    # Оставляем как есть, но теперь у вас есть кнопка выше, чтобы всё вернуть
     if os.path.exists(FILE): os.remove(FILE)
-    if os.path.exists(SCH_FILE): os.remove(SCH_FILE) # Удаляем и файл расписания
+    if os.path.exists(SCH_FILE): os.remove(SCH_FILE)
     if 'schedule' in st.session_state: del st.session_state.schedule
     st.rerun()
 
