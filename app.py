@@ -175,11 +175,30 @@ if up_file:
     try:
         restored_df = pd.read_csv(up_file)
         restored_df.to_csv(FILE, index=False)
-        st.sidebar.success("Данные успешно возвращены!")
+        
+        # --- АВТО-ВОССТАНОВЛЕНИЕ РАСПИСАНИЯ ИЗ CSV ---
+        if not restored_df.empty:
+            new_schedule = []
+            # Берем уникальные матчи из загруженного файла
+            unique_m = restored_df[["match_id", "pair_a", "pair_b"]].drop_duplicates()
+            for _, row in unique_m.iterrows():
+                # Разбиваем ID матча на названия клубов
+                t_a, t_b = row['match_id'].split("_vs_")
+                new_schedule.append({
+                    "id": row['match_id'],
+                    "label": f"{t_a} ({row['pair_a']}) vs {t_b} ({row['pair_b']})",
+                    "ta": t_a, "pa": row['pair_a'], "tb": t_b, "pb": row['pair_b']
+                })
+            
+            # Сохраняем восстановленное расписание
+            save_schedule(new_schedule)
+            st.session_state.schedule = new_schedule
+        
+        st.sidebar.success("Всё восстановлено: и счет, и пары!")
         time.sleep(1)
         st.rerun()
     except Exception as e:
-        st.sidebar.error("Ошибка в файле!")
+        st.sidebar.error(f"Ошибка при чтении файла: {e}")
 
 # 3. Безопасный сброс
 st.sidebar.markdown("---")
