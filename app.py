@@ -184,7 +184,6 @@ if up_file:
 # 3. Безопасный сброс
 st.sidebar.markdown("---")
 if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all_btn"):
-    # Оставляем как есть, но теперь у вас есть кнопка выше, чтобы всё вернуть
     if os.path.exists(FILE): os.remove(FILE)
     if os.path.exists(SCH_FILE): os.remove(SCH_FILE)
     if 'schedule' in st.session_state: del st.session_state.schedule
