@@ -208,6 +208,60 @@ if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all
     if 'schedule' in st.session_state: del st.session_state.schedule
     st.rerun()
 
+# ==========================================
+# ОБЩАЯ СВОДНАЯ ТАБЛИЦА (ТЕПЕРЬ В САМОМ ВЕРХУ)
+# ==========================================
+st.title("🏆 ПОЛОЖЕНИЕ КОМАНД")
+
+if not df.empty:
+    summary = []
+    for t in st.session_state.team_list:
+        t_pts, t_ud = 0.0, 0
+        details = []
+        m_ids = df[df.match_id.str.contains(t)].match_id.unique()
+        
+        for m_id in m_ids:
+            m_data = df[df.match_id == m_id]
+            t_a, t_b = m_id.split("_vs_")
+            ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
+            for r in ints:
+                sub = m_data[m_data.hole.isin(r)]
+                if not sub.empty:
+                    aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
+                    p = 0.0
+                    if aw == bw: p = 0.5
+                    elif (t == t_a and aw > bw) or (t == t_b and bw > aw): p = 1.0
+                    if p > 0:
+                        t_pts += p
+                        details.append(f"{p:g}")
+            
+            aw_total = len(m_data[m_data.result == 1])
+            bw_total = len(m_data[m_data.result == 2])
+            if t == t_a: t_ud += (aw_total - bw_total)
+            else: t_ud += (bw_total - aw_total)
+
+        det_str = f"({'+'.join(details)})" if details else ""
+        summary.append({
+            "КОМАНДА": t,
+            "МАТЧИ": f"{len(m_ids)} из 3",
+            "POINTS": t_pts,
+            "ИТОГ": f"{t_pts:g} {det_str}",
+            "U/D": t_ud
+        })
+
+    ldf = pd.DataFrame(summary).sort_values(by=["POINTS", "U/D"], ascending=False)
+    ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
+    ldf = ldf.drop(columns=["POINTS"])
+    
+    # ВАЖНО: Используем st.table, чтобы таблица была видна ВСЯ и СРАЗУ (без скролла внутри)
+    st.table(ldf)
+
+    # Фильтр ставим здесь же — он управляет матчами в самом низу
+    all_t_options = ["Все команды"] + st.session_state.team_list
+    filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть её матчи ниже:", all_t_options)
+
+st.markdown("---")
+
 # ======================
 # ВВОД МАРКЕРА
 # ======================
@@ -335,78 +389,7 @@ if not m_df.empty:
             </div>
         """, unsafe_allow_html=True)
 
-# ======================
-# ОБЩАЯ СВОДНАЯ ТАБЛИЦА
-# ======================
-st.title("ПОЛОЖЕНИЕ КОМАНД")
-
-# Фильтр по командам
-all_t_options = ["Все команды"] + st.session_state.team_list
-filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть матчи только с её участием:", all_t_options)
-
-if not df.empty:
-    summary = []
-    for t in st.session_state.team_list:
-        t_pts = 0.0
-        t_ud = 0
-        details = []
-        # Находим все матчи конкретной команды
-        m_ids = df[df.match_id.str.contains(t)].match_id.unique()
-        
-        for m_id in m_ids:
-            m_data = df[df.match_id == m_id]
-            t_a, t_b = m_id.split("_vs_")
-            
-            # Считаем Match Points (1.0 или 0.5 за отрезок)
-            ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
-            for r in ints:
-                sub = m_data[m_data.hole.isin(r)]
-                if not sub.empty:
-                    aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
-                    p = 0.0
-                    if aw == bw: p = 0.5
-                    elif (t == t_a and aw > bw) or (t == t_b and bw > aw): p = 1.0
-                    
-                    if p > 0:
-                        t_pts += p
-                        details.append(f"{p:g}")
-            
-            # Считаем U/D (Суммарная разница выигранных лунок)
-            aw_total = len(m_data[m_data.result == 1])
-            bw_total = len(m_data[m_data.result == 2])
-            if t == t_a: t_ud += (aw_total - bw_total)
-            else: t_ud += (bw_total - aw_total)
-
-        # Формируем строку итога с детализацией
-        det_str = f"({'+'.join(details)})" if details else ""
-        summary.append({
-            "КОМАНДА": t,
-            "МАТЧИ": f"Завершено {len(m_ids)} из 3",
-            "POINTS": t_pts,  # 👈 ДОБАВИЛИ (важно)
-            "ИТОГ": f"{t_pts:g} {det_str}",
-            "U/D": t_ud
-        })
-
-    # Сортировка: Сначала по очкам (ИТОГ), затем по разнице лунок (U/D)
-    ldf = pd.DataFrame(summary).sort_values(
-        by=["POINTS", "U/D"],
-        ascending=False
-    )
-    ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
-    ldf = ldf.drop(columns=["POINTS"])
-    
-    # Вывод в две колонки (как на скриншоте)
-    # c1, c2 = st.columns(2)
-    # mid = (len(ldf) + 1) // 2
-    
-    
-    # with c1: st.table(ldf.iloc[:mid].reset_index(drop=True))
-    # with c2: st.table(ldf.iloc[mid:].reset_index(drop=True))
-    st.dataframe(ldf, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-
-    # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
+    # КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
     unique_matches = df.match_id.unique()
     if filter_t != "Все команды":
         unique_matches = [m for m in unique_matches if filter_t in m]
