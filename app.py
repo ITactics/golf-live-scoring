@@ -364,7 +364,7 @@ div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color:
 </style>""", unsafe_allow_html=True)
 
 c1, c2, c3 = st.columns(3)
-with c1:
+with c1: 
     if st.button(f"🔴 {team_a}", use_container_width=True, key="win_a_btn"):
         save_result(1)
 with c2:
@@ -373,10 +373,6 @@ with c2:
 with c3:
     if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"):
         save_result(2)
-
-# Кнопка для исправления ошибок
-if st.button("🗑 Очистить результат этой лунки", use_container_width=True):
-    save_result(None)
 
 # ======================
 # 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
