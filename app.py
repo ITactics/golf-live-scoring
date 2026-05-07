@@ -27,6 +27,10 @@ def get_base64_image(image_path):
             return "data:image/png;base64," + base64.b64encode(img_file.read()).decode()
     return "https://flaticon.com"
 
+def set_df(new_df):
+    st.session_state.df = new_df
+    new_df.to_csv(FILE, index=False)
+
 def get_df():
     return st.session_state.df
 
@@ -307,6 +311,8 @@ hole = st.session_state.hole_num
 match_id = f"{team_a}_vs_{team_b}"
 
 def save_result(val):
+    df = get_df()
+
     new_data = pd.DataFrame([{
         "match_id": match_id,
         "hole": hole,
@@ -315,13 +321,10 @@ def save_result(val):
         "pair_b": p_b
     }])
 
-    df = get_df()
-
     mask = (df.match_id == match_id) & (df.hole == hole)
     df = pd.concat([df[~mask], new_data]).sort_values("hole")
 
-    st.session_state.df = df
-    df.to_csv(FILE, index=False)
+    set_df(df)
 
     st.toast(f"Лунка {hole} записана!")
 
