@@ -304,18 +304,30 @@ hole = st.session_state.hole_num
 match_id = f"{team_a}_vs_{team_b}"
 
 def save_result(val):
-    global df
-    new_data = pd.DataFrame([{"match_id": match_id, "hole": hole, "result": val, "pair_a": p_a, "pair_b": p_b}])
+    new_data = pd.DataFrame([{
+        "match_id": match_id,
+        "hole": hole,
+        "result": val,
+        "pair_a": p_a,
+        "pair_b": p_b
+    }])
+
+    df = st.session_state.df
+
     mask = (df.match_id == match_id) & (df.hole == hole)
     df = pd.concat([df[~mask], new_data]).sort_values("hole")
+
+    st.session_state.df = df
     df.to_csv(FILE, index=False)
+
     st.toast(f"Лунка {hole} записана!")
-    # Авто-переход на следующую лунку
+
     if st.session_state.hole_num < 18:
         st.session_state.hole_num += 1
+
     time.sleep(0.3)
     st.rerun()
-
+    
 # Кнопки ввода (Красная слева, Синяя справа + стили для яркости)
 st.markdown("""
 <style>
