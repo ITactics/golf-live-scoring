@@ -21,6 +21,7 @@ st.set_page_config(page_title="Golf TV Live", layout="wide")
 FILE = "tournament_results.csv"
 TEAMS_FILE = "teams_list.txt"
 
+@st.cache_data
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -94,129 +95,155 @@ def save_schedule(sch_list):
 if 'schedule' not in st.session_state:
     st.session_state.schedule = load_schedule()
 
-# 1. Логотипы команд
-with st.sidebar.expander("🖼 Логотипы команд"):
-    target_t = st.selectbox("Команда:", st.session_state.team_list, key="sel_logo")
-    t_logo = st.file_uploader(f"Загрузить лого для {target_t}", type=["png", "jpg"], key="up_logo")
-    if t_logo:
-        with open(f"logo_{target_t}.png", "wb") as f:
-            f.write(t_logo.getbuffer())
-        st.success("Сохранено!")
+# --- ПРОВЕРКА КТО ЗАШЕЛ (АДМИН ИЛИ МАРКЕР) ---
+url_match_id = st.query_params.get("match_id")
+
+if url_match_id:
+    # Ищем матч по ID из ссылки
+    active_m = next((m for m in st.session_state.schedule if m["id"] == url_match_id), None)
+    if active_m:
+        team_a, team_b = active_m["ta"], active_m["tb"]
+        p_a, p_b = active_m["pa"], active_m["pb"]
+        match_id = url_match_id
+        is_admin = False
+    else:
+        st.error("Матч не найден!")
+        st.stop()
+else:
+    is_admin = True
+    # Если зашел админ — показываем выбор матча
+    if st.session_state.schedule:
+        options = [m["label"] for m in st.session_state.schedule]
+        selected_label = st.sidebar.selectbox("🎯 Какую игру судим?", options)
+        active_m = next(m for m in st.session_state.schedule if m["label"] == selected_label)
+        team_a, p_a, team_b, p_b = active_m["ta"], active_m["pa"], active_m["tb"], active_m["pb"]
+        match_id = active_m["id"]
+    else:
+        team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
+        match_id = "default"
+
+
+# --- САЙДБАР (УПРАВЛЕНИЕ ДОСТУПОМ) ---
+if is_admin:
+    # 1. Логотипы команд
+    with st.sidebar.expander("🖼 Логотипы команд"):
+        target_t = st.selectbox("Команда:", st.session_state.team_list, key="sel_logo")
+        t_logo = st.file_uploader(f"Загрузить лого для {target_t}", type=["png", "jpg"], key="up_logo")
+        if t_logo:
+            with open(f"logo_{target_t}.png", "wb") as f:
+                f.write(t_logo.getbuffer())
+            st.success("Сохранено!")
+            st.rerun()
+
+    # 2. Управление списком клубов
+    with st.sidebar.expander("⚙️ Настройка списка клубов"):
+        new_team_name = st.text_input("Название нового клуба:", key="new_team_input")
+        if st.button("➕ Добавить клуб", key="add_team_btn"):
+            if new_team_name and new_team_name not in st.session_state.team_list:
+                st.session_state.team_list.append(new_team_name)
+                save_teams(st.session_state.team_list)
+                st.rerun()
+        
+        if len(st.session_state.team_list) > 0:
+            team_to_del = st.selectbox("Удалить клуб:", st.session_state.team_list, key="del_team_sel")
+            if st.button("🗑 Удалить", key="del_team_btn"):
+                st.session_state.team_list.remove(team_to_del)
+                save_teams(st.session_state.team_list)
+                st.rerun()
+
+    # 3. МЕНЕДЖЕР РАСПИСАНИЯ
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("📅 Создать расписание (Пары)"):
+        st.write("Добавьте пары на сегодня:")
+        m_ta = st.selectbox("Клуб А", st.session_state.team_list, key="m_ta")
+        m_pa = st.text_input("Пара А (Фамилии)", "Иванов/Петров", key="m_pa")
+        m_tb = st.selectbox("Клуб Б", [t for t in st.session_state.team_list if t != m_ta], key="m_tb")
+        m_pb = st.text_input("Пара Б (Фамилии)", "Сидоров/Борисов", key="m_pb")
+        
+        if st.button("➕ Добавить игру в список"):
+            match_info = {
+                "id": f"{m_ta}_vs_{m_tb}",
+                "label": f"{m_ta} ({m_pa}) vs {m_tb} ({m_pb})",
+                "ta": m_ta, "pa": m_pa, "tb": m_tb, "pb": m_pb
+            }
+            if match_info["id"] not in [m["id"] for m in st.session_state.schedule]:
+                st.session_state.schedule.append(match_info)
+                save_schedule(st.session_state.schedule)
+                st.success("Матч добавлен!")
+                st.rerun()
+
+    # --- НОВЫЙ БЛОК: ГЕНЕРАТОР ССЫЛОК ДЛЯ QR ---
+    with st.sidebar.expander("🔗 Ссылки для маркеров (QR)"):
+        base_url = "https://golf-live-scoring-jxrapw4dnjpqhtiefuarz2.streamlit.app"
+        if st.session_state.schedule:
+            for m in st.session_state.schedule:
+                st.write(f"**{m['label']}**")
+                st.code(f"{base_url}/?match_id={m['id']}")
+        else:
+            st.info("Создайте матчи, чтобы получить ссылки")
+
+else:
+    # Что видит маркер в сайдбаре вместо настроек админа
+    st.sidebar.success(f"Вы вводите счет для:\n\n**{team_a} vs {team_b}**")
+    if st.sidebar.button("🏠 Вернуться к общей таблице"):
+        st.query_params.clear()
         st.rerun()
 
-# 2. Управление списком клубов
-with st.sidebar.expander("⚙️ Настройка списка клубов"):
-    new_team_name = st.text_input("Название нового клуба:", key="new_team_input")
-    if st.button("➕ Добавить клуб", key="add_team_btn"):
-        if new_team_name and new_team_name not in st.session_state.team_list:
-            st.session_state.team_list.append(new_team_name)
-            save_teams(st.session_state.team_list)
-            st.rerun()
-    
-    if len(st.session_state.team_list) > 0:
-        team_to_del = st.selectbox("Удалить клуб:", st.session_state.team_list, key="del_team_sel")
-        if st.button("🗑 Удалить", key="del_team_btn"):
-            st.session_state.team_list.remove(team_to_del)
-            save_teams(st.session_state.team_list)
-            st.rerun()
-
-# 3. МЕНЕДЖЕР РАСПИСАНИЯ
-st.sidebar.markdown("---")
-with st.sidebar.expander("📅 Создать расписание (Пары)"):
-    st.write("Добавьте пары на сегодня:")
-    m_ta = st.selectbox("Клуб А", st.session_state.team_list, key="m_ta")
-    m_pa = st.text_input("Пара А (Фамилии)", "Иванов/Петров", key="m_pa")
-    m_tb = st.selectbox("Клуб Б", [t for t in st.session_state.team_list if t != m_ta], key="m_tb")
-    m_pb = st.text_input("Пара Б (Фамилии)", "Сидоров/Борисов", key="m_pb")
-    
-    if st.button("➕ Добавить игру в список"):
-        match_info = {
-            "id": f"{m_ta}_vs_{m_tb}",
-            "label": f"{m_ta} ({m_pa}) vs {m_tb} ({m_pb})",
-            "ta": m_ta, "pa": m_pa, "tb": m_tb, "pb": m_pb
-        }
-        # Проверка на дубликат и сохранение в файл
-        if match_info["id"] not in [m["id"] for m in st.session_state.schedule]:
-            st.session_state.schedule.append(match_info)
-            save_schedule(st.session_state.schedule) # Теперь сохраняем на диск!
-            st.success("Матч добавлен!")
-            st.rerun()
-
-# 4. ВЫБОР АКТИВНОГО МАТЧА
-st.sidebar.markdown("---")
-st.sidebar.subheader("🎯 Активная игра")
-
-# Всегда подгружаем свежее расписание из файла
-st.session_state.schedule = load_schedule()
-
-if st.session_state.schedule:
-    options = [m["label"] for m in st.session_state.schedule]
-    selected_label = st.sidebar.selectbox("Какую игру судим?", options)
-    
-    active_m = next(m for m in st.session_state.schedule if m["label"] == selected_label)
-    team_a, p_a = active_m["ta"], active_m["pa"]
-    team_b, p_b = active_m["tb"], active_m["pb"]
-else:
-    st.sidebar.warning("Сначала добавьте игры в расписание выше!")
-    team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
-
+# Общий выбор формата (доступен всем или тоже можно спрятать под is_admin)
 format_type = st.sidebar.selectbox("Формат зачета", ["9-9-18", "6-6-6-18"], key="fmt_sel")
 
 # ======================
-# СИСТЕМА СПАСЕНИЯ ДАННЫХ
+# СИСТЕМА СПАСЕНИЯ ДАННЫХ (ТОЛЬКО ДЛЯ АДМИНА)
 # ======================
-st.sidebar.markdown("---")
-st.sidebar.subheader("💾 Работа с данными")
+if is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💾 Работа с данными")
 
-# 1. Скачивание (Бэкап)
-if not df.empty:
-    csv_data = df.to_csv(index=False).encode('utf-8-sig')
-    st.sidebar.download_button(
-        label="📥 Скачать CSV (Бэкап)",
-        data=csv_data,
-        file_name='golf_results.csv',
-        mime='text/csv',
-        help="Скачайте файл в конце дня, чтобы данные не пропали!"
-    )
+    # 1. Скачивание (Бэкап)
+    if not df.empty:
+        st.sidebar.download_button(
+            label="📥 Скачать CSV (Бэкап)",
+            data=df.to_csv(index=False).encode('utf-8-sig'),
+            file_name='golf_results_backup.csv',
+            mime='text/csv'
+        )
 
-# 2. Загрузка (Восстановление)
-up_file = st.sidebar.file_uploader("🔄 Восстановить из файла", type="csv", help="Загрузите скачанный ранее файл, если данные обнулились")
-if up_file:
-    try:
-        restored_df = pd.read_csv(up_file)
-        restored_df.to_csv(FILE, index=False)
-        
-        # --- АВТО-ВОССТАНОВЛЕНИЕ РАСПИСАНИЯ ИЗ CSV ---
-        if not restored_df.empty:
-            new_schedule = []
-            # Берем уникальные матчи из загруженного файла
-            unique_m = restored_df[["match_id", "pair_a", "pair_b"]].drop_duplicates()
-            for _, row in unique_m.iterrows():
-                # Разбиваем ID матча на названия клубов
-                t_a, t_b = row['match_id'].split("_vs_")
-                new_schedule.append({
-                    "id": row['match_id'],
-                    "label": f"{t_a} ({row['pair_a']}) vs {t_b} ({row['pair_b']})",
-                    "ta": t_a, "pa": row['pair_a'], "tb": t_b, "pb": row['pair_b']
-                })
+    # 2. Загрузка (Восстановление)
+    up_file = st.sidebar.file_uploader("🔄 Восстановить из CSV", type="csv")
+    if up_file:
+        try:
+            restored_df = pd.read_csv(up_file)
+            restored_df.to_csv(FILE, index=False)
+            st.session_state.df = restored_df # Обновляем состояние сразу
             
-            # Сохраняем восстановленное расписание
-            save_schedule(new_schedule)
-            st.session_state.schedule = new_schedule
-        
-        st.sidebar.success("Всё восстановлено: и счет, и пары!")
-        time.sleep(1)
-        st.rerun()
-    except Exception as e:
-        st.sidebar.error(f"Ошибка при чтении файла: {e}")
+            # Восстановление расписания
+            if not restored_df.empty and 'match_id' in restored_df.columns:
+                new_sch = []
+                for m_id in restored_df['match_id'].unique():
+                    m_data = restored_df[restored_df['match_id'] == m_id].iloc[0]
+                    t_a, t_b = m_id.split("_vs_")
+                    new_sch.append({
+                        "id": m_id,
+                        "label": f"{t_a} ({m_data['pair_a']}) vs {t_b} ({m_data['pair_b']})",
+                        "ta": t_a, "pa": m_data['pair_a'], "tb": t_b, "pb": m_data['pair_b']
+                    })
+                save_schedule(new_sch)
+                st.session_state.schedule = new_sch
+            
+            st.sidebar.success("Данные и пары восстановлены!")
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.sidebar.error(f"Ошибка: {e}")
 
-# 3. Безопасный сброс
-st.sidebar.markdown("---")
-if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all_btn"):
-    if os.path.exists(FILE): os.remove(FILE)
-    if os.path.exists(SCH_FILE): os.remove(SCH_FILE)
-    if 'schedule' in st.session_state: del st.session_state.schedule
-    st.rerun()
+    # 3. Безопасный сброс с подтверждением
+    st.sidebar.markdown("---")
+    confirm_reset = st.sidebar.checkbox("Я хочу удалить все данные")
+    if st.sidebar.button("🗑 Сбросить ВСЕ", disabled=not confirm_reset):
+        for f in [FILE, SCH_FILE, TEAMS_FILE]:
+            if os.path.exists(f): os.remove(f)
+        st.session_state.clear() # Полная очистка памяти
+        st.rerun()
 
 # ==========================================
 # ОБЩАЯ СВОДНАЯ ТАБЛИЦА
@@ -225,66 +252,60 @@ st.title("🏆 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
     summary = []
+    # Работаем со списком уникальных матчей заранее
+    unique_matches_in_df = df.match_id.unique()
+
     for t in st.session_state.team_list:
-        t_pts, t_ud = 0.0, 0
-        details = []
-        m_ids = df[df.match_id.str.contains(t)].match_id.unique()
+        t_pts, t_ud, details = 0.0, 0, []
+        
+        # ТОЧНЫЙ ПОИСК: ищем команду только как целое название в ID матча
+        m_ids = [m for m in unique_matches_in_df if t in m.split("_vs_")]
         
         for m_id in m_ids:
             m_data = df[df.match_id == m_id]
-            t_a, t_b = m_id.split("_vs_")
+            t_a_n, t_b_n = m_id.split("_vs_")
+            
+            # Логика интервалов
             ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
+            
             for r in ints:
                 sub = m_data[m_data.hole.isin(r)]
                 if not sub.empty:
                     aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
                     p = 0.0
                     if aw == bw: p = 0.5
-                    elif (t == t_a and aw > bw) or (t == t_b and bw > aw): p = 1.0
+                    elif (t == t_a_n and aw > bw) or (t == t_b_n and bw > aw): p = 1.0
+                    
                     if p > 0:
                         t_pts += p
                         details.append(f"{p:g}")
             
+            # Расчет U/D (Up/Down)
             aw_total = len(m_data[m_data.result == 1])
             bw_total = len(m_data[m_data.result == 2])
-            if t == t_a: t_ud += (aw_total - bw_total)
+            if t == t_a_n: t_ud += (aw_total - bw_total)
             else: t_ud += (bw_total - aw_total)
 
         det_str = f"({'+'.join(details)})" if details else ""
         summary.append({
             "КОМАНДА": t,
-            "МАТЧИ": f"{len(m_ids)} из 3",
+            "МАТЧИ": f"{len(m_ids)}", # Убрал "из 3", так как матчей может быть другое кол-во
             "POINTS": t_pts,
             "ИТОГ": f"{t_pts:g} {det_str}",
             "U/D": t_ud
         })
 
-    # ldf = pd.DataFrame(summary).sort_values(by=["POINTS", "U/D"], ascending=False)
-    # ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
-    # ldf = ldf.drop(columns=["POINTS"])
-    
-    # st.dataframe(ldf, use_container_width=True, hide_index=True)
-
-    # # Фильтр ставим здесь же — он управляет матчами в самом низу
-    # all_t_options = ["Все команды"] + st.session_state.team_list
-    # filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть её матчи ниже:", all_t_options)
-    
+    # Формирование и стилизация таблицы
     ldf = pd.DataFrame(summary).sort_values(by=["POINTS", "U/D"], ascending=False)
     ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
-    ldf = ldf.drop(columns=["POINTS"]).reset_index(drop=True) # Сбрасываем индекс для стайлера
+    
+    # Вывод таблицы с подсветкой лидера
+    st.table(ldf.drop(columns=["POINTS"]).reset_index(drop=True).style.apply(
+        lambda s: ['background-color: rgba(255, 215, 0, 0.15); border-left: 5px solid gold;' if s.name == 0 else '' for _ in s], axis=1)
+    )
 
-    # --- ПОДСВЕТКА ЛИДЕРА ---
-    def highlight_leader(s):
-        # Если это первая строка (name == 0), красим фон и добавляем золотую полоску слева
-        return ['background-color: rgba(255, 215, 0, 0.15); border-left: 5px solid gold;' if s.name == 0 else '' for _ in s]
-
-    # Выводим красивую таблицу без скролла
-    st.table(ldf.style.apply(highlight_leader, axis=1))
-
-    # Фильтр ставим здесь же — он управляет матчами в самом низу
     all_t_options = ["Все команды"] + st.session_state.team_list
     filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть её матчи ниже:", all_t_options)
-
 
 st.markdown("---")
 
@@ -296,78 +317,66 @@ st.header("📱 Ввод результатов (Маркер)")
 if 'hole_num' not in st.session_state:
     st.session_state.hole_num = 1
 
-# Кнопки переключения лунок без клавиатуры
+# Кнопки переключения лунок
 ch1, ch2, ch3 = st.columns([1, 2, 1])
 with ch1:
-    if st.button("➖", use_container_width=True):
+    if st.button("➖", key="prev_h"):
         st.session_state.hole_num = max(1, st.session_state.hole_num - 1)
 with ch2:
     st.markdown(f"<h2 style='text-align:center; margin:0;'>Лунка {st.session_state.hole_num}</h2>", unsafe_allow_html=True)
-with ch3:
-    if st.button("➕", use_container_width=True):
+with c3:
+    if st.button("➕", key="next_h"):
         st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
 
-hole = st.session_state.hole_num
-match_id = f"{team_a}_vs_{team_b}"
-
 def save_result(val):
-    df = get_df()
-
+    # Работаем напрямую с session_state для надежности
+    current_df = st.session_state.df
+    
     new_data = pd.DataFrame([{
         "match_id": match_id,
-        "hole": hole,
+        "hole": st.session_state.hole_num,
         "result": val,
         "pair_a": p_a,
         "pair_b": p_b
     }])
 
-    mask = (df.match_id == match_id) & (df.hole == hole)
-    df = pd.concat([df[~mask], new_data]).sort_values("hole")
+    mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+    
+    # Если val - None, то мы просто удаляем запись (функция очистки)
+    if val is None:
+        updated_df = current_df[~mask]
+        st.toast(f"Лунка {st.session_state.hole_num} очищена")
+    else:
+        updated_df = pd.concat([current_df[~mask], new_data]).sort_values("hole")
+        st.toast(f"Лунка {st.session_state.hole_num} записана!")
+        if st.session_state.hole_num < 18:
+            st.session_state.hole_num += 1
 
-    set_df(df)
-
-    st.toast(f"Лунка {hole} записана!")
-
-    if st.session_state.hole_num < 18:
-        st.session_state.hole_num += 1
-
+    st.session_state.df = updated_df
+    updated_df.to_csv(FILE, index=False)
     time.sleep(0.3)
     st.rerun()
-    
-# Кнопки ввода (Красная слева, Синяя справа + стили для яркости)
-st.markdown("""
-<style>
-/* Красная кнопка (Команда А) */
-div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] {
-    background-color: #ff4d4d !important;
-    color: white !important;
-    border: none;
-}
-/* Синяя кнопка (Команда Б) */
-div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] {
-    background-color: #007bff !important;
-    color: white !important;
-    border: none;
-}
-/* Серая кнопка (Ничья) */
-div[data-testid="stHorizontalBlock"] button[key="draw_btn"] {
-    background-color: #555555 !important;
-    color: white !important;
-    border: none;
-}
-</style>
-""", unsafe_allow_html=True)
+
+# Кнопки ввода
+st.markdown("""<style>
+div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] { background-color: #ff4d4d !important; color: white !important; }
+div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color: #007bff !important; color: white !important; }
+</style>""", unsafe_allow_html=True)
 
 c1, c2, c3 = st.columns(3)
-with c1: 
-    if st.button(f"🔴 {team_a}", use_container_width=True, key="win_a_btn"): 
+with c1:
+    if st.button(f"🔴 {team_a}", use_container_width=True, key="win_a_btn"):
         save_result(1)
-with c2: 
-    if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"): 
+with c2:
+    if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"):
         save_result(0)
-with c3: 
-    if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"): 
+with c3:
+    if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"):
         save_result(2)
+
+# Кнопка для исправления ошибок
+if st.button("🗑 Очистить результат этой лунки", use_container_width=True):
+    save_result(None)
 
 # ======================
 # 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
