@@ -494,12 +494,31 @@ if not m_df.empty:
                     </div>
                     """, unsafe_allow_html=True)
                     
-# Симуляция (18 лунок для полноты картины)
+# Симуляция (Много матчей для проверки прокрутки)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     demo = []
-    for _ in range(4):
+    # Генерируем, например, 10 разных матчей (пар)
+    # Чтобы увидеть, как работает прокрутка под "застывшей" таблицей
+    for i in range(10): 
+        # Выбираем случайные команды из списка
         t_a_d, t_b_d = random.sample(st.session_state.team_list, 2)
-        for h in range(1, 19): # Теперь 18 лунок
-            demo.append({"match_id": f"{t_a_d}_vs_{t_b_d}", "hole": h, "result": random.choice([1,0,2]), "pair_a": "Игрок А1/А2", "pair_b": "Игрок Б1/Б2"})
-    pd.DataFrame(demo).to_csv(FILE, index=False)
+        
+        # Генерируем разные названия пар для реалистичности
+        p_a = f"Пара {random.choice(['A','B','C'])}{i+1}"
+        p_b = f"Пара {random.choice(['X','Y','Z'])}{i+1}"
+        
+        for h in range(1, 19): 
+            demo.append({
+                "match_id": f"{t_a_d}_vs_{t_b_d}_{i}", # Добавили i, чтобы ID были уникальными
+                "hole": h, 
+                "result": random.choice([1, 0, 2]), 
+                "pair_a": p_a, 
+                "pair_b": p_b
+            })
+            
+    new_df = pd.DataFrame(demo)
+    new_df.to_csv(FILE, index=False)
+    st.session_state['df'] = new_df # Обновляем в памяти для мгновенного эффекта
+    st.success(f"Создано 10 матчей (180 лунок)!")
+    time.sleep(1)
     st.rerun()
