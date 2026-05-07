@@ -209,7 +209,7 @@ if st.sidebar.button("🗑 Сбросить ВСЕ данные", key="reset_all
     st.rerun()
 
 # ==========================================
-# ОБЩАЯ СВОДНАЯ ТАБЛИЦА (ТЕПЕРЬ В САМОМ ВЕРХУ)
+# ОБЩАЯ СВОДНАЯ ТАБЛИЦА
 # ==========================================
 st.title("🏆 ПОЛОЖЕНИЕ КОМАНД")
 
@@ -253,8 +253,7 @@ if not df.empty:
     ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
     ldf = ldf.drop(columns=["POINTS"])
     
-    # ВАЖНО: Используем st.table, чтобы таблица была видна ВСЯ и СРАЗУ (без скролла внутри)
-    st.table(ldf)
+    st.dataframe(ldf, use_container_width=True, hide_index=True)
 
     # Фильтр ставим здесь же — он управляет матчами в самом низу
     all_t_options = ["Все команды"] + st.session_state.team_list
@@ -362,7 +361,7 @@ if not m_df.empty:
         st.markdown(draw_row(range(1, 10)), unsafe_allow_html=True)
         st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
         
-        # --- НОВАЯ ЛОГИКА: СЧИТАЕМ ТУРНИРНЫЕ ОЧКИ (MATCH POINTS) ---
+        # --- СЧИТАЕМ ТУРНИРНЫЕ ОЧКИ (MATCH POINTS) ---
         main_pts_a, main_pts_b = 0.0, 0.0
         intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
         
