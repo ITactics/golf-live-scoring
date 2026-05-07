@@ -515,28 +515,3 @@ if not m_df.empty:
                     </div>
                     """, unsafe_allow_html=True)
                     
-# Симуляция (18 лунок для полноты картины)
-if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
-    demo = []
-
-    for _ in range(4):
-        t_a_d, t_b_d = random.sample(st.session_state.team_list, 2)
-
-        for h in range(1, 19):
-            demo.append({
-                "match_id": f"{t_a_d}_vs_{t_b_d}",
-                "hole": h,
-                "result": random.choice([1, 0, 2]),
-                "pair_a": "Игрок А1/А2",
-                "pair_b": "Игрок Б1/Б2"
-            })
-
-    new_df = pd.DataFrame(demo)
-    set_df(new_df)
-
-    st.session_state.hole_num = 1
-    st.session_state.schedule = load_schedule()
-
-    st.session_state.pop("selected_label", None)
-
-    st.rerun()
