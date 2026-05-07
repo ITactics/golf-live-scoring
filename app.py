@@ -27,6 +27,9 @@ def get_base64_image(image_path):
             return "data:image/png;base64," + base64.b64encode(img_file.read()).decode()
     return "https://flaticon.com"
 
+def get_df():
+    return st.session_state.df
+
 def load_teams():
     if os.path.exists(TEAMS_FILE):
         with open(TEAMS_FILE, "r", encoding="utf-8") as f:
@@ -47,7 +50,7 @@ if "df" not in st.session_state:
         st.session_state.df = pd.DataFrame(columns=["match_id", "hole", "result", "pair_a", "pair_b"])
         st.session_state.df.to_csv(FILE, index=False)
 
-df = st.session_state.df
+df = get_df()
 
 # ======================
 # 2. СТИЛИ (ФИКСАЦИЯ ЦВЕТОВ)
@@ -312,7 +315,7 @@ def save_result(val):
         "pair_b": p_b
     }])
 
-    df = st.session_state.df
+    df = get_df()
 
     mask = (df.match_id == match_id) & (df.hole == hole)
     df = pd.concat([df[~mask], new_data]).sort_values("hole")
