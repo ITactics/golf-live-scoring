@@ -317,7 +317,7 @@ st.header("📱 Ввод результатов (Маркер)")
 if 'hole_num' not in st.session_state:
     st.session_state.hole_num = 1
 
-# 1. Блок переключения лунок (используем имена ch1, ch2, ch3)
+# 1. Блок переключения лунок
 ch1, ch2, ch3 = st.columns([1, 2, 1])
 with ch1:
     if st.button("➖", key="prev_h", use_container_width=True):
@@ -328,7 +328,36 @@ with ch3:
     if st.button("➕", key="next_h", use_container_width=True):
         st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
 
-# 2. Блок кнопок ввода (используем имена b1, b2, b3, чтобы не путаться)
+# --- ФУНКЦИЯ СОХРАНЕНИЯ (ОБЯЗАТЕЛЬНО ПЕРЕД КНОПКАМИ) ---
+def save_result(val):
+    current_df = st.session_state.df
+    
+    # Если нажали "Очистить" (val=None)
+    mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+    
+    if val is None:
+        updated_df = current_df[~mask]
+        st.toast(f"Лунка {st.session_state.hole_num} очищена")
+    else:
+        new_row = pd.DataFrame([{
+            "match_id": match_id,
+            "hole": st.session_state.hole_num,
+            "result": val,
+            "pair_a": p_a,
+            "pair_b": p_b
+        }])
+        updated_df = pd.concat([current_df[~mask], new_row]).sort_values("hole")
+        st.toast(f"Лунка {st.session_state.hole_num} записана!")
+        if st.session_state.hole_num < 18:
+            st.session_state.hole_num += 1
+
+    # Сохраняем и обновляем
+    st.session_state.df = updated_df
+    updated_df.to_csv(FILE, index=False)
+    time.sleep(0.3)
+    st.rerun()
+
+# 2. Блок кнопок ввода
 st.markdown("""<style>
 div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] { background-color: #ff4d4d !important; color: white !important; }
 div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color: #007bff !important; color: white !important; }
