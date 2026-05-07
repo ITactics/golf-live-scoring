@@ -328,17 +328,22 @@ with ch3:
     if st.button("➕", key="next_h", use_container_width=True):
         st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
 
-# --- ФУНКЦИЯ СОХРАНЕНИЯ (ОБЯЗАТЕЛЬНО ПЕРЕД КНОПКАМИ) ---
+# --- ФУНКЦИЯ СОХРАНЕНИЯ (УМНАЯ ОЧИСТКА) ---
 def save_result(val):
     current_df = st.session_state.df
     
-    # Если нажали "Очистить" (val=None)
-    mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
-    
     if val is None:
-        updated_df = current_df[~mask]
+        # ПРОВЕРКА: если текущая лунка пустая, откатываемся на одну назад
+        mask_current = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+        if current_df[mask_current].empty and st.session_state.hole_num > 1:
+            st.session_state.hole_num -= 1
+        
+        # Теперь удаляем результат (либо текущий, либо тот, на который откатились)
+        mask_to_delete = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+        updated_df = current_df[~mask_to_delete]
         st.toast(f"Лунка {st.session_state.hole_num} очищена")
     else:
+        # Обычная запись результата
         new_row = pd.DataFrame([{
             "match_id": match_id,
             "hole": st.session_state.hole_num,
@@ -346,8 +351,11 @@ def save_result(val):
             "pair_a": p_a,
             "pair_b": p_b
         }])
+        mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
         updated_df = pd.concat([current_df[~mask], new_row]).sort_values("hole")
         st.toast(f"Лунка {st.session_state.hole_num} записана!")
+        
+        # Переходим вперед только при записи
         if st.session_state.hole_num < 18:
             st.session_state.hole_num += 1
 
@@ -357,11 +365,18 @@ def save_result(val):
     time.sleep(0.3)
     st.rerun()
 
-# 2. Блок кнопок ввода
+# --- КНОПКИ ВВОДА ---
 st.markdown("""<style>
 div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] { background-color: #ff4d4d !important; color: white !important; }
 div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color: #007bff !important; color: white !important; }
 </style>""", unsafe_allow_html=True)
+
+# Проверяем, есть ли уже результат на текущей лунке
+current_res = st.session_state.df[(st.session_state.df.match_id == match_id) & (st.session_state.df.hole == st.session_state.hole_num)]
+if not current_res.empty:
+    res_val = current_res.iloc[0]['result']
+    res_txt = f"🔴 {team_a}" if res_val == 1 else f"🔵 {team_b}" if res_val == 2 else "🤝 НИЧЬЯ"
+    st.warning(f"На лунке {st.session_state.hole_num} уже введено: {res_txt}")
 
 b1, b2, b3 = st.columns(3)
 with b1:
@@ -374,8 +389,8 @@ with b3:
     if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"):
         save_result(2)
 
-# Кнопка очистки
-if st.button("🗑 Очистить результат этой лунки", use_container_width=True):
+# Кнопка очистки (теперь она "умная")
+if st.button("🗑 Очистить (или откатить назад)", use_container_width=True):
     save_result(None)
 
 # ======================
