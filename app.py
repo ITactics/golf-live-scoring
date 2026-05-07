@@ -532,9 +532,11 @@ if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
             })
 
     new_df = pd.DataFrame(demo)
-
     set_df(new_df)
+
     st.session_state.hole_num = 1
     st.session_state.schedule = load_schedule()
+
+    st.session_state.pop("selected_label", None)
 
     st.rerun()
