@@ -249,15 +249,32 @@ if not df.empty:
             "U/D": t_ud
         })
 
+    # ldf = pd.DataFrame(summary).sort_values(by=["POINTS", "U/D"], ascending=False)
+    # ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
+    # ldf = ldf.drop(columns=["POINTS"])
+    
+    # st.dataframe(ldf, use_container_width=True, hide_index=True)
+
+    # # Фильтр ставим здесь же — он управляет матчами в самом низу
+    # all_t_options = ["Все команды"] + st.session_state.team_list
+    # filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть её матчи ниже:", all_t_options)
+    
     ldf = pd.DataFrame(summary).sort_values(by=["POINTS", "U/D"], ascending=False)
     ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
-    ldf = ldf.drop(columns=["POINTS"])
-    
-    st.dataframe(ldf, use_container_width=True, hide_index=True)
+    ldf = ldf.drop(columns=["POINTS"]).reset_index(drop=True) # Сбрасываем индекс для стайлера
+
+    # --- ПОДСВЕТКА ЛИДЕРА ---
+    def highlight_leader(s):
+        # Если это первая строка (name == 0), красим фон и добавляем золотую полоску слева
+        return ['background-color: rgba(255, 215, 0, 0.15); border-left: 5px solid gold;' if s.name == 0 else '' for _ in s]
+
+    # Выводим красивую таблицу без скролла
+    st.table(ldf.style.apply(highlight_leader, axis=1))
 
     # Фильтр ставим здесь же — он управляет матчами в самом низу
     all_t_options = ["Все команды"] + st.session_state.team_list
     filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть её матчи ниже:", all_t_options)
+
 
 st.markdown("---")
 
