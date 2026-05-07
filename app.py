@@ -515,33 +515,23 @@ if not m_df.empty:
                     </div>
                     """, unsafe_allow_html=True)
                     
-# Симуляция (Все клубы участвуют в парах)
+# Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     demo = []
-    # Делаем копию списка и перемешиваем его
-    teams = st.session_state.team_list.copy()
-    random.shuffle(teams)
-    
-    # Идем по списку и берем по 2 команды подряд
-    for i in range(0, len(teams) - 1, 2):
-        t_a_d = teams[i]
-        t_b_d = teams[i+1]
-        
-        # Для каждой пары генерируем 18 лунок
+
+    for _ in range(4):
+        t_a_d, t_b_d = random.sample(st.session_state.team_list, 2)
+
         for h in range(1, 19):
             demo.append({
-                "match_id": f"{t_a_d}_vs_{t_b_d}", 
-                "hole": h, 
-                "result": random.choice([1, 0, 2]), 
-                "pair_a": f"Пара {t_a_d}", 
-                "pair_b": f"Пара {t_b_d}"
+                "match_id": f"{t_a_d}_vs_{t_b_d}",
+                "hole": h,
+                "result": random.choice([1, 0, 2]),
+                "pair_a": "Игрок А1/А2",
+                "pair_b": "Игрок Б1/Б2"
             })
-    
-    # Сохраняем и перезагружаем
+
     new_df = pd.DataFrame(demo)
-    new_df.to_csv(FILE, index=False)
-    # Сразу обновляем в памяти, чтобы всё появилось мгновенно
-    st.session_state.df = new_df
-    df = new_df
-    df.to_csv(FILE, index=False)
+    set_df(new_df)
+
     st.rerun()
