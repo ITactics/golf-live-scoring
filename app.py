@@ -494,33 +494,12 @@ if not m_df.empty:
                     </div>
                     """, unsafe_allow_html=True)
                     
-# Симуляция матчей
+# Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     demo = []
-    # Берем все доступные команды
-    teams = st.session_state.team_list
-    if len(teams) >= 2:
-        # Генерируем 6 матчей (пар), чтобы было что поскроллить
-        for i in range(6):
-            t_a_d, t_b_d = random.sample(teams, 2)
-            # Формируем ID строго как в твоем основном коде
-            m_id = f"{t_a_d}_vs_{t_b_d}"
-            
-            for h in range(1, 19):
-                demo.append({
-                    "match_id": m_id, 
-                    "hole": h, 
-                    "result": random.choice([1, 0, 2]), 
-                    "pair_a": f"Пара A-{i+1}", 
-                    "pair_b": f"Пара B-{i+1}"
-                })
-        
-        new_df = pd.DataFrame(demo)
-        new_df.to_csv(FILE, index=False)
-        
-        # ВАЖНО: Принудительно обновляем df в памяти
-        st.session_state['df'] = new_df 
-        
-        st.sidebar.success("Турнир создан!")
-        time.sleep(1)
-        st.rerun()
+    for _ in range(4):
+        t_a_d, t_b_d = random.sample(st.session_state.team_list, 2)
+        for h in range(1, 19): # Теперь 18 лунок
+            demo.append({"match_id": f"{t_a_d}_vs_{t_b_d}", "hole": h, "result": random.choice([1,0,2]), "pair_a": "Игрок А1/А2", "pair_b": "Игрок Б1/Б2"})
+    pd.DataFrame(demo).to_csv(FILE, index=False)
+    st.rerun()
