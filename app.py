@@ -388,6 +388,11 @@ if not m_df.empty:
             </div>
         """, unsafe_allow_html=True)
 
+    # === ВИЗУАЛЬНЫЙ РАЗДЕЛИТЕЛЬ ===
+    st.markdown("<br><br>", unsafe_allow_html=True) # Добавляем отступ сверху
+    st.subheader(f"📋 История и детали всех матчей ({filter_t})")
+    st.markdown("---") # Линия-разделитель
+
     # КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
     unique_matches = df.match_id.unique()
     if filter_t != "Все команды":
