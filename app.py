@@ -535,5 +535,7 @@ if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
     new_df = pd.DataFrame(demo)
     new_df.to_csv(FILE, index=False)
     # Сразу обновляем в памяти, чтобы всё появилось мгновенно
-    st.session_state.df = new_df 
+    st.session_state.df = new_df
+    df = new_df
+    df.to_csv(FILE, index=False)
     st.rerun()
