@@ -317,62 +317,37 @@ st.header("📱 Ввод результатов (Маркер)")
 if 'hole_num' not in st.session_state:
     st.session_state.hole_num = 1
 
-# Кнопки переключения лунок
+# 1. Блок переключения лунок (используем имена ch1, ch2, ch3)
 ch1, ch2, ch3 = st.columns([1, 2, 1])
 with ch1:
-    if st.button("➖", key="prev_h"):
+    if st.button("➖", key="prev_h", use_container_width=True):
         st.session_state.hole_num = max(1, st.session_state.hole_num - 1)
 with ch2:
     st.markdown(f"<h2 style='text-align:center; margin:0;'>Лунка {st.session_state.hole_num}</h2>", unsafe_allow_html=True)
-with c3:
-    if st.button("➕", key="next_h"):
+with ch3:
+    if st.button("➕", key="next_h", use_container_width=True):
         st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
 
-def save_result(val):
-    # Работаем напрямую с session_state для надежности
-    current_df = st.session_state.df
-    
-    new_data = pd.DataFrame([{
-        "match_id": match_id,
-        "hole": st.session_state.hole_num,
-        "result": val,
-        "pair_a": p_a,
-        "pair_b": p_b
-    }])
-
-    mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
-    
-    # Если val - None, то мы просто удаляем запись (функция очистки)
-    if val is None:
-        updated_df = current_df[~mask]
-        st.toast(f"Лунка {st.session_state.hole_num} очищена")
-    else:
-        updated_df = pd.concat([current_df[~mask], new_data]).sort_values("hole")
-        st.toast(f"Лунка {st.session_state.hole_num} записана!")
-        if st.session_state.hole_num < 18:
-            st.session_state.hole_num += 1
-
-    st.session_state.df = updated_df
-    updated_df.to_csv(FILE, index=False)
-    time.sleep(0.3)
-    st.rerun()
-
-# Кнопки ввода
+# 2. Блок кнопок ввода (используем имена b1, b2, b3, чтобы не путаться)
 st.markdown("""<style>
 div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] { background-color: #ff4d4d !important; color: white !important; }
 div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color: #007bff !important; color: white !important; }
 </style>""", unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns(3)
-with c1: 
+b1, b2, b3 = st.columns(3)
+with b1:
     if st.button(f"🔴 {team_a}", use_container_width=True, key="win_a_btn"):
         save_result(1)
-with c2:
+with b2:
     if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"):
         save_result(0)
-with c3:
+with b3:
     if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"):
         save_result(2)
+
+# Кнопка очистки
+if st.button("🗑 Очистить результат этой лунки", use_container_width=True):
+    save_result(None)
 
 # ======================
 # 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
