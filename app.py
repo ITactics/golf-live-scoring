@@ -40,11 +40,14 @@ def save_teams(teams):
 if 'team_list' not in st.session_state:
     st.session_state.team_list = load_teams()
 
-if os.path.exists(FILE):
-    df = pd.read_csv(FILE)
-else:
-    df = pd.DataFrame(columns=["match_id", "hole", "result", "pair_a", "pair_b"])
-    df.to_csv(FILE, index=False)
+if "df" not in st.session_state:
+    if os.path.exists(FILE):
+        st.session_state.df = pd.read_csv(FILE)
+    else:
+        st.session_state.df = pd.DataFrame(columns=["match_id", "hole", "result", "pair_a", "pair_b"])
+        st.session_state.df.to_csv(FILE, index=False)
+
+df = st.session_state.df
 
 # ======================
 # 2. СТИЛИ (ФИКСАЦИЯ ЦВЕТОВ)
