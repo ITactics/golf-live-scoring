@@ -338,213 +338,157 @@ if not m_df.empty:
 # ======================
 # ОБЩАЯ СВОДНАЯ ТАБЛИЦА
 # ======================
-
 st.title("ПОЛОЖЕНИЕ КОМАНД")
 
-left_col, right_col = st.columns([1, 2])
+# Фильтр по командам
+all_t_options = ["Все команды"] + st.session_state.team_list
+filter_t = st.selectbox("🎯 Выберите команду, чтобы посмотреть матчи только с её участием:", all_t_options)
 
-# ======================
-# ЛЕВАЯ КОЛОНКА
-# ======================
-with left_col:
+if not df.empty:
+    summary = []
+    for t in st.session_state.team_list:
+        t_pts = 0.0
+        t_ud = 0
+        details = []
+        # Находим все матчи конкретной команды
+        m_ids = df[df.match_id.str.contains(t)].match_id.unique()
+        
+        for m_id in m_ids:
+            m_data = df[df.match_id == m_id]
+            t_a, t_b = m_id.split("_vs_")
+            
+            # Считаем Match Points (1.0 или 0.5 за отрезок)
+            ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
+            for r in ints:
+                sub = m_data[m_data.hole.isin(r)]
+                if not sub.empty:
+                    aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
+                    p = 0.0
+                    if aw == bw: p = 0.5
+                    elif (t == t_a and aw > bw) or (t == t_b and bw > aw): p = 1.0
+                    
+                    if p > 0:
+                        t_pts += p
+                        details.append(f"{p:g}")
+            
+            # Считаем U/D (Суммарная разница выигранных лунок)
+            aw_total = len(m_data[m_data.result == 1])
+            bw_total = len(m_data[m_data.result == 2])
+            if t == t_a: t_ud += (aw_total - bw_total)
+            else: t_ud += (bw_total - aw_total)
 
-    all_t_options = ["Все команды"] + st.session_state.team_list
+        # Формируем строку итога с детализацией
+        det_str = f"({'+'.join(details)})" if details else ""
+        summary.append({
+            "КОМАНДА": t,
+            "МАТЧИ": f"Завершено {len(m_ids)} из 3",
+            "POINTS": t_pts,  # 👈 ДОБАВИЛИ (важно)
+            "ИТОГ": f"{t_pts:g} {det_str}",
+            "U/D": t_ud
+        })
 
-    filter_t = st.radio(
-        "Команды",
-        all_t_options
+    # Сортировка: Сначала по очкам (ИТОГ), затем по разнице лунок (U/D)
+    ldf = pd.DataFrame(summary).sort_values(
+        by=["POINTS", "U/D"],
+        ascending=False
     )
+    ldf.insert(0, 'МЕСТО', range(1, len(ldf) + 1))
+    ldf = ldf.drop(columns=["POINTS"])
+    
+    # Вывод в две колонки (как на скриншоте)
+    # c1, c2 = st.columns(2)
+    # mid = (len(ldf) + 1) // 2
+    
+    
+    # with c1: st.table(ldf.iloc[:mid].reset_index(drop=True))
+    # with c2: st.table(ldf.iloc[mid:].reset_index(drop=True))
+    st.dataframe(ldf, use_container_width=True, hide_index=True)
 
-    if not df.empty:
+    st.markdown("---")
 
-        summary = []
-
-        for t in st.session_state.team_list:
-
-            t_pts = 0.0
-            t_ud = 0
-
-            m_ids = df[df.match_id.str.contains(t)].match_id.unique()
-
-            for m_id in m_ids:
-
-                m_data = df[df.match_id == m_id]
-                t_a, t_b = m_id.split("_vs_")
-
-                ints = (
-                    [range(1,10), range(10,19), range(1,19)]
-                    if format_type == "9-9-18"
-                    else [range(1,7), range(7,13), range(13,19), range(1,19)]
-                )
-
-                for r in ints:
-
+    # 2. КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
+    unique_matches = df.match_id.unique()
+    if filter_t != "Все команды":
+        unique_matches = [m for m in unique_matches if filter_t in m]
+    for i in range(0, len(unique_matches), 2):
+        row = st.columns(2)
+        for j in range(2):
+            if i + j < len(unique_matches):
+                curr_m = unique_matches[i+j]
+                m_data = df[df.match_id == curr_m]
+                t_a_n, t_b_n = curr_m.split("_vs_")
+                
+                # Считаем очки матча (Match Points)
+                pts_a, pts_b = 0.0, 0.0
+                intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+                
+                def get_status_html(h_range):
+                    sub = m_data[m_data.hole.isin(h_range)]
+                    if sub.empty: return "<span></span>", "<span></span>"
+                    a_w = len(sub[sub.result == 1])
+                    b_w = len(sub[sub.result == 2])
+                    diff = a_w - b_w
+                    if diff > 0: 
+                        return f"<b style='color:#ff4d4d; font-size:10px;'>{diff} UP</b>", f"<span style='color:#ccc; font-size:10px;'>{diff} DN</span>"
+                    elif diff < 0:
+                        return f"<span style='color:#ccc; font-size:10px;'>{abs(diff)} DN</span>", f"<b style='color:#007bff; font-size:10px;'>{abs(diff)} UP</b>"
+                    else:
+                        return "<b style='color:#777; font-size:10px;'>AS</b>", "<b style='color:#777; font-size:10px;'>AS</b>"
+    
+                def draw_status_row(h_range):
+                    s_left, s_right = get_status_html(h_range)
+                    row_html = f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="width:40px; text-align:left;">{s_left}</div>'
+                    row_html += '<div style="display:flex; gap:2px;">'
+                    for h in h_range:
+                        res = m_data[m_data.hole == h].result.values
+                        bg = "#eee"
+                        if len(res) > 0:
+                            bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#bbb"
+                        row_html += f'<div style="width:8px; height:8px; background:{bg}; border-radius:50%;"></div>'
+                    row_html += f'</div><div style="width:40px; text-align:right;">{s_right}</div></div>'
+                    return row_html
+    
+                for r in intervals:
                     sub = m_data[m_data.hole.isin(r)]
-
                     if not sub.empty:
-
-                        aw = len(sub[sub.result == 1])
-                        bw = len(sub[sub.result == 2])
-
-                        if aw == bw:
-                            t_pts += 0.5
-                        elif (t == t_a and aw > bw) or (t == t_b and bw > aw):
-                            t_pts += 1.0
-
-                aw_total = len(m_data[m_data.result == 1])
-                bw_total = len(m_data[m_data.result == 2])
-
-                if t == t_a:
-                    t_ud += (aw_total - bw_total)
-                else:
-                    t_ud += (bw_total - aw_total)
-
-            summary.append({
-                "МЕСТО": 0,
-                "КОМАНДА": t,
-                "PTS": t_pts,
-                "U/D": t_ud
-            })
-
-        ldf = pd.DataFrame(summary).sort_values(
-            by=["PTS", "U/D"],
-            ascending=False
-        ).reset_index(drop=True)
-
-        ldf["МЕСТО"] = ldf.index + 1
-
-        st.table(ldf)
-
-# ======================
-# ПРАВАЯ КОЛОНКА
-# ======================
-with right_col:
-
-    if not df.empty:
-
-        unique_matches = df.match_id.unique()
-
-        if filter_t != "Все команды":
-            unique_matches = [m for m in unique_matches if filter_t in m]
-
-        for i in range(0, len(unique_matches), 2):
-
-            row = st.columns(2)
-
-            for j in range(2):
-
-                if i + j < len(unique_matches):
-
-                    curr_m = unique_matches[i + j]
-                    m_data = df[df.match_id == curr_m]
-
-                    t_a_n, t_b_n = curr_m.split("_vs_")
-
-                    pts_a, pts_b = 0.0, 0.0
-
-                    intervals = (
-                        [range(1,10), range(10,19), range(1,19)]
-                        if format_type == "9-9-18"
-                        else [range(1,7), range(7,13), range(13,19), range(1,19)]
-                    )
-
-                    def get_status_html(h_range):
-
-                        sub = m_data[m_data.hole.isin(h_range)]
-
-                        if sub.empty:
-                            return "<span></span>", "<span></span>"
-
-                        a_w = len(sub[sub.result == 1])
-                        b_w = len(sub[sub.result == 2])
-
-                        diff = a_w - b_w
-
-                        if diff > 0:
-                            return f"<b style='color:#ff4d4d'>{diff} UP</b>", f"<span>{diff} DN</span>"
-                        elif diff < 0:
-                            return f"<span>{abs(diff)} DN</span>", f"<b style='color:#007bff'>{abs(diff)} UP</b>"
-                        else:
-                            return "<b>AS</b>", "<b>AS</b>"
-
-                    def draw_status_row(h_range):
-
-                        s_left, s_right = get_status_html(h_range)
-
-                        html = f"""
-                        <div style='display:flex; justify-content:space-between; margin-bottom:4px;'>
-                            <div style='width:40px'>{s_left}</div>
-                            <div style='display:flex; gap:2px'>
-                        """
-
-                        for h in h_range:
-
-                            res = m_data[m_data.hole == h].result.values
-
-                            bg = "#eee"
-                            if len(res) > 0:
-                                bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#bbb"
-
-                            html += f"<div style='width:8px;height:8px;background:{bg};border-radius:50%'></div>"
-
-                        html += f"""
+                        aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
+                        if aw == bw: pts_a += 0.5; pts_b += 0.5
+                        elif aw > bw: pts_a += 1.0
+                        else: pts_b += 1.0
+    
+                p_a_disp = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
+                p_b_disp = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
+    
+                with row[j]:
+                    st.markdown(f"""
+                    <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="width:25%; text-align:left;">
+                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
+                                <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
+                                <span style="font-size:9px; color:#666;">{p_a_disp}</span>
                             </div>
-                            <div style='width:40px;text-align:right'>{s_right}</div>
-                        </div>
-                        """
-
-                        return html
-
-                    for r in intervals:
-
-                        sub = m_data[m_data.hole.isin(r)]
-
-                        if not sub.empty:
-
-                            aw = len(sub[sub.result == 1])
-                            bw = len(sub[sub.result == 2])
-
-                            if aw == bw:
-                                pts_a += 0.5
-                                pts_b += 0.5
-                            elif aw > bw:
-                                pts_a += 1.0
-                            else:
-                                pts_b += 1.0
-
-                    p_a_disp = m_data.iloc[-1]["pair_a"] if not m_data.empty else "Пара А"
-                    p_b_disp = m_data.iloc[-1]["pair_b"] if not m_data.empty else "Пара Б"
-
-                    with row[j]:
-
-                        st.markdown(f"""
-                        <div style="background:white;padding:15px;border-radius:15px;
-                        box-shadow:0 4px 15px rgba(0,0,0,0.3);
-                        border-left:10px solid #ff4d4d;border-right:10px solid #007bff">
-
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-
-                                <div>
-                                    <b style="color:#ff4d4d">{t_a_n}</b><br>
-                                    <small>{p_a_disp}</small>
+                            <div style="width:50%; text-align:center;">
+                                <div style="font-size:46px; font-weight:900; line-height:1; letter-spacing:-2px; margin-bottom:2px;">
+                                    <span style="color:#ff4d4d;">{pts_a:g}</span>
+                                    <span style="color:#000;">:</span>
+                                    <span style="color:#007bff;">{pts_b:g}</span>
                                 </div>
-
-                                <div style="font-size:30px;font-weight:800">
-                                    {pts_a:g} : {pts_b:g}
-                                </div>
-
-                                <div style="text-align:right">
-                                    <b style="color:#007bff">{t_b_n}</b><br>
-                                    <small>{p_b_disp}</small>
-                                </div>
-
+                                <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
                             </div>
-
-                            {draw_status_row(range(1,10))}
-                            {draw_status_row(range(10,19))}
-
+                            <div style="width:25%; text-align:right;">
+                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
+                                <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
+                                <span style="font-size:9px; color:#666;">{p_b_disp}</span>
+                            </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        {draw_status_row(range(1, 10))}
+                        {draw_status_row(range(10, 19))}
+                        <div style="border-top:1px solid #eee; margin-top:8px; padding-top:8px;">
+                            {draw_status_row(range(1, 19))}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                         
 # Симуляция (18 лунок для полноты картины)
 if st.sidebar.button("🚀 Демо-турнир", key="demo_tournament_btn"):
