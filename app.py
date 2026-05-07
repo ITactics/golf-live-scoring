@@ -339,23 +339,27 @@ if not m_df.empty:
 # ОБЩАЯ СВОДНАЯ ТАБЛИЦА
 # ======================
 
-# ==========================================
-# 1. CSS ДЛЯ ФИКСАЦИИ ТАБЛИЦЫ (STICKY HEADER)
-# ==========================================
 st.markdown("""
     <style>
-        /* Фиксируем блок с таблицей и фильтром наверху */
+        /* Фиксируем весь верхний блок */
         div[data-testid="stVerticalBlock"] > div:has(div.sticky-header) {
             position: sticky;
             top: 2.8rem;
             z-index: 1000;
-            background-color: rgba(0, 0, 0, 0.9); /* Темный фон под стать твоим стилям */
-            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.95);
+            padding: 15px;
             border-bottom: 2px solid #444;
-            border-radius: 0 0 15px 15px;
         }
-        /* Уменьшаем высоту строк в таблице для компактности */
-        [data-testid="stDataFrame"] { height: auto !important; }
+        /* Делаем таблицу внутри компактнее */
+        .sticky-header table {
+            margin-bottom: 0px !important;
+            font-size: 14px;
+        }
+        /* Убираем лишние отступы у заголовка */
+        .sticky-header h1 {
+            padding: 0;
+            margin-bottom: 10px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -410,8 +414,8 @@ with st.container():
         ldf["МЕСТО"] = range(1, len(ldf) + 1)
         display_ldf = ldf[["МЕСТО", "КОМАНДА", "ИТОГ", "U/D"]]
         
-        # Компактный вывод таблицы (макс. высота, чтобы не занимала весь экран)
-        st.dataframe(display_ldf, use_container_width=True, hide_index=True, height=180)
+        # ЗАМЕНЯЕМ st.dataframe НА st.table:
+        st.table(display_ldf)
 
         # ФИЛЬТР (тоже закреплен)
         all_t_options = ["Все команды"] + st.session_state.team_list
