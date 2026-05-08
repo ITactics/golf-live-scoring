@@ -21,7 +21,6 @@ st.set_page_config(page_title="Golf TV Live", layout="wide")
 FILE = "tournament_results.csv"
 TEAMS_FILE = "teams_list.txt"
 
-@st.cache_data
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
