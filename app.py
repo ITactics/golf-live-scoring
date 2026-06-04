@@ -360,7 +360,9 @@ def save_result(val):
             "hole": st.session_state.hole_num,
             "result": val,
             "pair_a": p_a,
-            "pair_b": p_b
+            "pair_b": p_b,
+            "team_a": team_a,
+            "team_b": team_b
         }])
         mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
         updated_df = pd.concat([current_df[~mask], new_row]).sort_values("hole")
