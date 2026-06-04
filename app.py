@@ -388,18 +388,19 @@ div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color:
 current_res = st.session_state.df[(st.session_state.df.match_id == match_id) & (st.session_state.df.hole == st.session_state.hole_num)]
 if not current_res.empty:
     res_val = current_res.iloc[0]['result']
-    res_txt = f"🔴 {team_a}" if res_val == 1 else f"🔵 {team_b}" if res_val == 2 else "🤝 НИЧЬЯ"
+    res_txt = f"🔴 {team_a} ({p_a})" if res_val == 1 else f"🔵 {team_b} ({p_b})" if res_val == 2 else "🤝 НИЧЬЯ"
     st.warning(f"На лунке {st.session_state.hole_num} уже введено: {res_txt}")
 
 b1, b2, b3 = st.columns(3)
 with b1:
-    if st.button(f"🔴 {team_a}", use_container_width=True, key="win_a_btn"):
+    # Кнопка со второй строчкой для фамилий
+    if st.button(f"🔴 {team_a}\n\n({p_a})", use_container_width=True, key="win_a_btn"):
         save_result(1)
 with b2:
-    if st.button("🤝 НИЧЬЯ", use_container_width=True, key="draw_btn"):
+    if st.button("🤝\n\nНИЧЬЯ", use_container_width=True, key="draw_btn"):
         save_result(0)
 with b3:
-    if st.button(f"🔵 {team_b}", use_container_width=True, key="win_b_btn"):
+    if st.button(f"🔵 {team_b}\n\n({p_b})", use_container_width=True, key="win_b_btn"):
         save_result(2)
 
 # Кнопка очистки (теперь она "умная")
