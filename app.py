@@ -469,7 +469,6 @@ if not m_df.empty:
     st.markdown("---") # Линия-разделитель
 
     # КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
-        # КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
     visible_matches = st.session_state.schedule
     if filter_t != "Все команды":
         visible_matches = [m for m in visible_matches if m["ta"] == filter_t or m["tb"] == filter_t]
