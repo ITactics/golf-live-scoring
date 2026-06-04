@@ -94,10 +94,18 @@ def save_schedule(sch_list):
 if 'schedule' not in st.session_state:
     st.session_state.schedule = load_schedule()
 
-# --- ПРОВЕРКА КТО ЗАШЕЛ (АДМИН ИЛИ МАРКЕР) ---
+# --- ПРОВЕРКА КТО ЗАШЕЛ (АДМИН, МАРКЕР ИЛИ ЗРИТЕЛЬ) ---
 url_match_id = st.query_params.get("match_id")
+view_mode = st.query_params.get("view")  # Считываем режим просмотра (?view=live)
 
-if url_match_id:
+if view_mode == "live":
+    is_admin = False
+    is_viewer = True
+    team_a, team_b, p_a, p_b = "Клуб А", "Клуб Б", "Пара А", "Пара Б"
+    match_id = None
+    format_type = "9-9-18"  # Заглушка формата для зрителя
+
+elif url_match_id:
     # Ищем матч по ID из ссылки
     active_m = next((m for m in st.session_state.schedule if m["id"] == url_match_id), None)
     if active_m:
@@ -105,11 +113,13 @@ if url_match_id:
         p_a, p_b = active_m["pa"], active_m["pb"]
         match_id = url_match_id
         is_admin = False
+        is_viewer = False
     else:
         st.error("Матч не найден!")
         st.stop()
 else:
     is_admin = True
+    is_viewer = False
     # Если зашел админ — показываем выбор матча
     if st.session_state.schedule:
         options = [m["label"] for m in st.session_state.schedule]
@@ -123,13 +133,20 @@ else:
 
 
 # --- САЙДБАР (УПРАВЛЕНИЕ ДОСТУПОМ) ---
-if is_admin:
+if is_viewer:
+    # Скрываем все настройки админа от зрителей, показываем простую плашку
+    st.sidebar.markdown("### 🏆 Live Табло турнира")
+    st.sidebar.info("Данные обновляются автоматически.")
+
+elif is_admin:
     # 1. Логотипы команд
     with st.sidebar.expander("🖼 Логотипы команд"):
         target_t = st.selectbox("Команда:", st.session_state.team_list, key="sel_logo")
         t_logo = st.file_uploader(f"Загрузить лого для {target_t}", type=["png", "jpg"], key="up_logo")
         if t_logo:
-            with open(f"logo_{target_t}.png", "wb") as f:
+            # Безопасное имя файла: убираем пробелы, чтобы логотипы всегда загружались и отображались
+            safe_name = f"logo_{target_t}.png".replace(" ", "_")
+            with open(safe_name, "wb") as f:
                 f.write(t_logo.getbuffer())
             st.success("Сохранено!")
             st.rerun()
@@ -194,6 +211,13 @@ if is_admin:
     # --- НОВЫЙ БЛОК: ГЕНЕРАТОР ССЫЛОК ДЛЯ QR ---
     with st.sidebar.expander("🔗 Ссылки для маркеров (QR)"):
         base_url = "https://golf-live-scoring-jxrapw4dnjpqhtiefuarz2.streamlit.app"
+        
+        # Ссылка для копирования админом (её вы будете отправлять в общие чаты)
+        st.write("📢 **Ссылка для ЗРИТЕЛЕЙ (Табло):**")
+        st.code(f"{base_url}/?view=live")
+        st.markdown("---")
+        
+        st.write("📱 **Ссылки для маркеров (Ввод счета):**")
         if st.session_state.schedule:
             for m in st.session_state.schedule:
                 st.write(f"**{m['label']}**")
@@ -208,8 +232,9 @@ else:
         st.query_params.clear()
         st.rerun()
 
-# Общий выбор формата (доступен всем или тоже можно спрятать под is_admin)
-format_type = st.sidebar.selectbox("Формат зачета", ["9-9-18", "6-6-6-18"], key="fmt_sel")
+# Выбор формата зачета скрыт от зрителей, чтобы они ничего не сбили
+if not is_viewer:
+    format_type = st.sidebar.selectbox("Формат зачета", ["9-9-18", "6-6-6-18"], key="fmt_sel")
 
 # ======================
 # СИСТЕМА СПАСЕНИЯ ДАННЫХ (ТОЛЬКО ДЛЯ АДМИНА)
@@ -353,149 +378,159 @@ st.markdown("---")
 # ======================
 # ВВОД МАРКЕРА
 # ======================
-st.header("📱 Ввод результатов (Маркер)")
+# Показываем блок ввода лунок только если это НЕ зритель
+if not is_viewer:
+    st.header("📱 Ввод результатов (Маркер)")
 
-if 'hole_num' not in st.session_state:
-    st.session_state.hole_num = 1
+    if 'hole_num' not in st.session_state:
+        st.session_state.hole_num = 1
 
-# 1. Блок переключения лунок
-ch1, ch2, ch3 = st.columns([1, 2, 1])
-with ch1:
-    if st.button("➖", key="prev_h", use_container_width=True):
-        st.session_state.hole_num = max(1, st.session_state.hole_num - 1)
-with ch2:
-    st.markdown(f"<h2 style='text-align:center; margin:0;'>Лунка {st.session_state.hole_num}</h2>", unsafe_allow_html=True)
-with ch3:
-    if st.button("➕", key="next_h", use_container_width=True):
-        st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
+    # 1. Блок переключения лунок
+    ch1, ch2, ch3 = st.columns([1, 2, 1])
+    with ch1:
+        if st.button("➖", key="prev_h", use_container_width=True):
+            st.session_state.hole_num = max(1, st.session_state.hole_num - 1)
+    with ch2:
+        st.markdown(f"<h2 style='text-align:center; margin:0;'>Лунка {st.session_state.hole_num}</h2>", unsafe_allow_html=True)
+    with ch3:
+        if st.button("➕", key="next_h", use_container_width=True):
+            st.session_state.hole_num = min(18, st.session_state.hole_num + 1)
 
-# --- ФУНКЦИЯ СОХРАНЕНИЯ (УМНАЯ ОЧИСТКА) ---
-def save_result(val):
-    current_df = st.session_state.df
-    
-    if val is None:
-        # ПРОВЕРКА: если текущая лунка пустая, откатываемся на одну назад
-        mask_current = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
-        if current_df[mask_current].empty and st.session_state.hole_num > 1:
-            st.session_state.hole_num -= 1
+# === ЗРИТЕЛЬ НЕ ДОЛЖЕН ВИДЕТЬ КНОПКИ ВВОДА И СТРАНИЦУ ОДНОЙ ПАРЫ ===
+if is_viewer:
+    # Если зашел зритель, мы мгновенно останавливаем выполнение этого блока.
+    # Но перед этим принудительно пропускаем код дальше, чтобы в самом низу
+    # отрисовался визуальный разделитель и карточки всех матчей.
+    pass
+else:
+    # --- ФУНКЦИЯ СОХРАНЕНИЯ (УМНАЯ ОЧИСТКА) ---
+    def save_result(val):
+        current_df = st.session_state.df
         
-        # Теперь удаляем результат (либо текущий, либо тот, на который откатились)
-        mask_to_delete = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
-        updated_df = current_df[~mask_to_delete]
-        st.toast(f"Лунка {st.session_state.hole_num} очищена")
-    else:
-        # Обычная запись результата
-        new_row = pd.DataFrame([{
-            "match_id": match_id,
-            "hole": st.session_state.hole_num,
-            "result": val,
-            "pair_a": p_a,
-            "pair_b": p_b,
-            "team_a": team_a,
-            "team_b": team_b
-        }])
-        mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
-        updated_df = pd.concat([current_df[~mask], new_row]).sort_values("hole")
-        st.toast(f"Лунка {st.session_state.hole_num} записана!")
-        
-        # Переходим вперед только при записи
-        if st.session_state.hole_num < 18:
-            st.session_state.hole_num += 1
-
-    # Сохраняем и обновляем
-    st.session_state.df = updated_df
-    updated_df.to_csv(FILE, index=False)
-    time.sleep(0.3)
-    st.rerun()
-
-# --- КНОПКИ ВВОДА ---
-st.markdown("""<style>
-div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] { background-color: #ff4d4d !important; color: white !important; }
-div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color: #007bff !important; color: white !important; }
-</style>""", unsafe_allow_html=True)
-
-# Проверяем, есть ли уже результат на текущей лунке
-current_res = st.session_state.df[(st.session_state.df.match_id == match_id) & (st.session_state.df.hole == st.session_state.hole_num)]
-if not current_res.empty:
-    res_val = current_res.iloc[0]['result']
-    res_txt = f"🔴 {team_a} ({p_a})" if res_val == 1 else f"🔵 {team_b} ({p_b})" if res_val == 2 else "🤝 НИЧЬЯ"
-    st.warning(f"На лунке {st.session_state.hole_num} уже введено: {res_txt}")
-
-b1, b2, b3 = st.columns(3)
-with b1:
-    # Кнопка со второй строчкой для фамилий
-    if st.button(f"🔴 {team_a}\n\n({p_a})", use_container_width=True, key="win_a_btn"):
-        save_result(1)
-with b2:
-    if st.button("🤝\n\nНИЧЬЯ", use_container_width=True, key="draw_btn"):
-        save_result(0)
-with b3:
-    if st.button(f"🔵 {team_b}\n\n({p_b})", use_container_width=True, key="win_b_btn"):
-        save_result(2)
-
-# Кнопка очистки (теперь она "умная")
-if st.button("🗑 Очистить (или откатить назад)", use_container_width=True):
-    save_result(None)
-
-# ======================
-# 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
-# ======================
-st.markdown("---")
-m_df = df[df.match_id == match_id]
-if not m_df.empty:
-    l_col, m_col, r_col = st.columns([2, 5, 2])
-    with l_col:
-        st.image(get_base64_image(f"logo_{team_a}.png"), width=80)
-        # Название левой команды КРАСНЫМ
-        st.markdown(f"<h3 style='color:#ff4d4d !important;'>{team_a}</h3><p>{p_a}</p>", unsafe_allow_html=True)
-    with r_col:
-        st.markdown(f"<div style='text-align:right;'><img src='{get_base64_image(f'logo_{team_b}.png')}' width='80'></div>", unsafe_allow_html=True)
-        # Название правой команды СИНИМ
-        st.markdown(f"<div style='text-align:right;'><h3 style='color:#007bff !important;'>{team_b}</h3><p>{p_b}</p></div>", unsafe_allow_html=True)
-    with m_col:
-        def draw_row(h_range):
-            html = '<div style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">'
-            for h in h_range:
-                res = m_df[m_df.hole == h].result.values
-                bg = "#444"
-                if len(res) > 0: 
-                    # ИСПРАВЛЕНО: 1 — Красный (Команда А), 2 — Синий (Команда Б)
-                    bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#888"
-                html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:white;">{h}</div>'
-            return html + '</div>'
+        if val is None:
+            # ПРОВЕРКА: если текущая лунка пустая, откатываемся на одну назад
+            mask_current = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+            if current_df[mask_current].empty and st.session_state.hole_num > 1:
+                st.session_state.hole_num -= 1
             
-        st.markdown(draw_row(range(1, 10)), unsafe_allow_html=True)
-        st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
-        
-        # --- СЧИТАЕМ ТУРНИРНЫЕ ОЧКИ (MATCH POINTS) ---
-        main_pts_a, main_pts_b = 0.0, 0.0
-        intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
-        
-        for r in intervals:
-            subset = m_df[m_df.hole.isin(r)]
-            if not subset.empty:
-                aw, bw = len(subset[subset.result==1]), len(subset[subset.result==2])
-                if aw == bw:
-                    main_pts_a += 0.5; main_pts_b += 0.5
-                elif aw > bw:
-                    main_pts_a += 1.0
-                else:
-                    main_pts_b += 1.0
+            # Теперь удаляем результат (либо текущий, либо тот, на который откатились)
+            mask_to_delete = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+            updated_df = current_df[~mask_to_delete]
+            st.toast(f"Лунка {st.session_state.hole_num} очищена")
+        else:
+            # Обычная запись результата
+            new_row = pd.DataFrame([{
+                "match_id": match_id,
+                "hole": st.session_state.hole_num,
+                "result": val,
+                "pair_a": p_a,
+                "pair_b": p_b,
+                "team_a": team_a,
+                "team_b": team_b
+            }])
+            mask = (current_df.match_id == match_id) & (current_df.hole == st.session_state.hole_num)
+            updated_df = pd.concat([current_df[~mask], new_row]).sort_values("hole")
+            st.toast(f"Лунка {st.session_state.hole_num} записана!")
+            
+            # Переходим вперед только при записи
+            if st.session_state.hole_num < 18:
+                st.session_state.hole_num += 1
 
-        # ВЫВОДИМ ОЧКИ МАТЧА (Красный слева, Синий справа)
-        st.markdown(f"""
-            <div style='text-align:center;'>
-                <h1 style='font-size:80px; margin:0; line-height:1; font-weight:bold;'>
-                    <span style='color:#ff4d4d;'>{main_pts_a:g}</span> 
-                    <span style='color:white;'>:</span> 
-                    <span style='color:#007bff;'>{main_pts_b:g}</span>
-                </h1>
-                <p style='color:#aaa; font-weight:bold; letter-spacing:2px; margin-top:5px; font-size:14px; text-transform:uppercase;'>Match Points</p>
-            </div>
-        """, unsafe_allow_html=True)
+        # Сохраняем и обновляем
+        st.session_state.df = updated_df
+        updated_df.to_csv(FILE, index=False)
+        time.sleep(0.3)
+        st.rerun()
 
-    # === ВИЗУАЛЬНЫЙ РАЗДЕЛИТЕЛЬ ===
-    st.markdown("<br><br>", unsafe_allow_html=True) # Добавляем отступ сверху
+    # --- КНОПКИ ВВОДА ---
+    st.markdown("""<style>
+    div[data-testid="stHorizontalBlock"] button[key="win_a_btn"] { background-color: #ff4d4d !important; color: white !important; }
+    div[data-testid="stHorizontalBlock"] button[key="win_b_btn"] { background-color: #007bff !important; color: white !important; }
+    </style>""", unsafe_allow_html=True)
+
+    # Проверяем, есть ли уже результат на текущей лунке
+    current_res = st.session_state.df[(st.session_state.df.match_id == match_id) & (st.session_state.df.hole == st.session_state.hole_num)]
+    if not current_res.empty:
+        res_val = current_res.iloc[0]['result']
+        res_txt = f"🔴 {team_a} ({p_a})" if res_val == 1 else f"🔵 {team_b} ({p_b})" if res_val == 2 else "🤝 НИЧЬЯ"
+        st.warning(f"На лунке {st.session_state.hole_num} уже введено: {res_txt}")
+
+    b1, b2, b3 = st.columns(3)
+    with b1:
+        # Кнопка со второй строчкой для фамилий
+        if st.button(f"🔴 {team_a}\n\n({p_a})", use_container_width=True, key="win_a_btn"):
+            save_result(1)
+    with b2:
+        if st.button("🤝\n\nНИЧЬЯ", use_container_width=True, key="draw_btn"):
+            save_result(0)
+    with b3:
+        if st.button(f"🔵 {team_b}\n\n({p_b})", use_container_width=True, key="win_b_btn"):
+            save_result(2)
+
+    # Кнопка очистки (теперь она "умная")
+    if st.button("🗑 Очистить (или откатить назад)", use_container_width=True):
+        save_result(None)
+
+    # ======================
+    # 5. СТРАНИЦА ПАРЫ (ВИЗУАЛ)
+    # ======================
+    st.markdown("---")
+    m_df = df[df.match_id == match_id]
+    if not m_df.empty:
+        l_col, m_col, r_col = st.columns([2, 5, 2])
+        with l_col:
+            st.image(get_base64_image(f"logo_{team_a}.png".replace(" ", "_")), width=80)
+            # Название левой команды КРАСНЫМ
+            st.markdown(f"<h3 style='color:#ff4d4d !important;'>{team_a}</h3><p>{p_a}</p>", unsafe_allow_html=True)
+        with r_col:
+            st.markdown(f"<div style='text-align:right;'><img src='{get_base64_image(f'logo_{team_b}.png'.replace(' ', '_'))}' width='80'></div>", unsafe_allow_html=True)
+            # Название правой команды СИНИМ
+            st.markdown(f"<div style='text-align:right;'><h3 style='color:#007bff !important;'>{team_b}</h3><p>{p_b}</p></div>", unsafe_allow_html=True)
+        with m_col:
+            def draw_row(h_range):
+                html = '<div style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">'
+                for h in h_range:
+                    res = m_df[m_df.hole == h].result.values
+                    bg = "#444"
+                    if len(res) > 0: 
+                        # ИСПРАВЛЕНО: 1 — Красный (Команда А), 2 — Синий (Команда Б)
+                        bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#888"
+                    html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:white;">{h}</div>'
+                return html + '</div>'
+                
+            st.markdown(draw_row(range(1, 10)), unsafe_allow_html=True)
+            st.markdown(draw_row(range(10, 19)), unsafe_allow_html=True)
+            
+            # --- СЧИТАЕМ ТУРНИРНЫЕ ОЧКИ (MATCH POINTS) ---
+            main_pts_a, main_pts_b = 0.0, 0.0
+            intervals = [range(1, 10), range(10, 19), range(1, 19)] if format_type == "9-9-18" else [range(1, 7), range(7, 13), range(13, 19), range(1, 19)]
+            
+            for r in intervals:
+                subset = m_df[m_df.hole.isin(r)]
+                if not subset.empty:
+                    aw, bw = len(subset[subset.result==1]), len(subset[subset.result==2])
+                    if aw == bw:
+                        main_pts_a += 0.5; main_pts_b += 0.5
+                    elif aw > bw:
+                        main_pts_a += 1.0
+                    else:
+                        main_pts_b += 1.0
+
+            # ВЫВОДИМ ОЧКИ МАТЧА (Красный слева, Синий справа)
+            st.markdown(f"""
+                <div style='text-align:center;'>
+                    <h1 style='font-size:80px; margin:0; line-height:1; font-weight:bold;'>
+                        <span style='color:#ff4d4d;'>{main_pts_a:g}</span> 
+                        <span style='color:white;'>:</span> 
+                        <span style='color:#007bff;'>{main_pts_b:g}</span>
+                    </h1>
+                    <p style='color:#aaa; font-weight:bold; letter-spacing:2px; margin-top:5px; font-size:14px; text-transform:uppercase;'>Match Points</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+# === ВИЗУАЛЬНЫЙ РАЗДЕЛИТЕЛЬ ===
+st.markdown("<br><br>", unsafe_allow_html=True) # Добавляем отступ сверху
+if 'filter_t' in locals():
     st.subheader(f"📋 История и детали всех матчей ({filter_t})")
     st.markdown("---") # Линия-разделитель
 
@@ -561,7 +596,7 @@ if not m_df.empty:
                     <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <div style="width:25%; text-align:left;">
-                                <img src="{get_base64_image(f'logo_{t_a_n}.png')}" width="35"><br>
+                                <img src="{get_base64_image(f'logo_{t_a_n}.png'.replace(' ', '_'))}" width="35"><br>
                                 <b style="color:#ff4d4d; font-size:12px;">{t_a_n}</b><br>
                                 <span style="font-size:9px; color:#666;">{p_a_disp}</span>
                             </div>
@@ -574,7 +609,7 @@ if not m_df.empty:
                                 <div style="font-size:9px; font-weight:bold; color:#aaa; letter-spacing:1px; text-transform:uppercase;">Match Points</div>
                             </div>
                             <div style="width:25%; text-align:right;">
-                                <img src="{get_base64_image(f'logo_{t_b_n}.png')}" width="35"><br>
+                                <img src="{get_base64_image(f'logo_{t_b_n}.png'.replace(' ', '_'))}" width="35"><br>
                                 <b style="color:#007bff; font-size:12px;">{t_b_n}</b><br>
                                 <span style="font-size:9px; color:#666;">{p_b_disp}</span>
                             </div>
