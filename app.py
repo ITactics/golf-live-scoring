@@ -191,7 +191,7 @@ if is_admin:
 
 else:
     # Что видит маркер в сайдбаре вместо настроек админа
-    st.sidebar.success(f"Вы вводите счет для:\n\n**{team_a} vs {team_b}**")
+    st.sidebar.success(f"Вы вводите счет для:\n\n**{team_a} ({p_a}) vs {team_b} ({p_b})**")
     if st.sidebar.button("🏠 Вернуться к общей таблице"):
         st.query_params.clear()
         st.rerun()
