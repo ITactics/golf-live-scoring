@@ -119,7 +119,7 @@ else:
         match_id = active_m["id"]
     else:
         team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
-        match_id = "default"
+        match_id = None
 
 
 # --- САЙДБАР (УПРАВЛЕНИЕ ДОСТУПОМ) ---
@@ -246,12 +246,24 @@ if is_admin:
                     t_b = m_data['team_b'] if 'team_b' in restored_df.columns else "Клуб Б"
                     p_a = m_data['pair_a'] if 'pair_a' in restored_df.columns else "Пара А"
                     p_b = m_data['pair_b'] if 'pair_b' in restored_df.columns else "Пара Б"
+
+                    # === АВТО-ВОССТАНОВЛЕНИЕ КЛУБОВ ===
+                    # Если клуба из бэкапа нет в текущем списке системы, добавляем его!
+                    if t_a not in st.session_state.team_list and t_a != "Клуб А":
+                        st.session_state.team_list.append(t_a)
+                    if t_b not in st.session_state.team_list and t_b != "Клуб Б":
+                        st.session_state.team_list.append(t_b)
+                    # ==================================
                     
                     new_sch.append({
                         "id": m_id,
                         "label": f"{t_a} ({p_a}) vs {t_b} ({p_b})",
                         "ta": t_a, "pa": p_a, "tb": t_b, "pb": p_b
                     })
+
+                # Сохраняем обновленный список клубов на диск
+                save_teams(st.session_state.team_list)
+                
                 save_schedule(new_sch)
                 st.session_state.schedule = new_sch
             
