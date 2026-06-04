@@ -123,18 +123,38 @@ elif url_match_id:
         st.error("Матч не найден!")
         st.stop()
 else:
-    is_admin = True
-    is_viewer = False
-    # Если зашел админ — показываем выбор матча
-    if st.session_state.schedule:
-        options = [m["label"] for m in st.session_state.schedule]
-        selected_label = st.sidebar.selectbox("🎯 Какую игру судим?", options)
-        active_m = next(m for m in st.session_state.schedule if m["label"] == selected_label)
-        team_a, p_a, team_b, p_b = active_m["ta"], active_m["pa"], active_m["tb"], active_m["pb"]
-        match_id = active_m["id"]
+    # Зашел админ — сначала запрашиваем пароль
+    st.sidebar.markdown("### 🔐 Авторизация")
+    admin_password = st.sidebar.text_input("Введите пароль администратора:", type="password", key="admin_pwd_input")
+    
+    # Замените 'golf2026' на любой свой секретный пароль
+    if admin_password == "GolfLiveScore!2026":
+        is_admin = True
+        is_viewer = False
+        st.sidebar.success("Доступ разрешен!")
+        
+        # Если зашел админ — показываем выбор матча
+        if st.session_state.schedule:
+            options = [m["label"] for m in st.session_state.schedule]
+            selected_label = st.sidebar.selectbox("🎯 Какую игру судим?", options)
+            active_m = next(m for m in st.session_state.schedule if m["label"] == selected_label)
+            team_a, p_a, team_b, p_b = active_m["ta"], active_m["pa"], active_m["tb"], active_m["pb"]
+            match_id = active_m["id"]
+        else:
+            team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
+            match_id = None
     else:
-        team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
+        # Если пароль не введен или введен неверно — блокируем админку
+        is_admin = False
+        is_viewer = False
         match_id = None
+        team_a, p_a, team_b, p_b = "Клуб А", "Пара А", "Клуб Б", "Пара Б"
+        
+        # Если пароль ввели, но он неправильный — выводим предупреждение
+        if admin_password:
+            st.sidebar.error("Неверный пароль!")
+        else:
+            st.sidebar.warning("Для доступа к панели управления введите пароль.")
 
 
 # --- САЙДБАР (УПРАВЛЕНИЕ ДОСТУПОМ) ---
