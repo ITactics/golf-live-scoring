@@ -173,6 +173,18 @@ if is_admin:
             if match_info["label"] not in [m["label"] for m in st.session_state.schedule]:
                 st.session_state.schedule.append(match_info)
                 save_schedule(st.session_state.schedule)
+                empty_row = pd.DataFrame([{
+                    "match_id": unique_id, 
+                    "hole": 0, 
+                    "result": 0, 
+                    "pair_a": m_pa, 
+                    "pair_b": m_pb, 
+                    "team_a": m_ta, 
+                    "team_b": m_tb
+                }])
+                st.session_state.df = pd.concat([st.session_state.df, empty_row]).reset_index(drop=True)
+                st.session_state.df.to_csv(FILE, index=False)
+                
                 st.success("Матч добавлен!")
                 st.rerun()
             else:
