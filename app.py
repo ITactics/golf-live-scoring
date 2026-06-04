@@ -262,7 +262,10 @@ if not df.empty:
         
         for m_id in m_ids:
             m_data = df[df.match_id == m_id]
-            t_a_n, t_b_n = m_id.split("_vs_")
+            # t_a_n, t_b_n = m_id.split("_vs_")
+            parts = m_id.split("_vs_")
+            t_a_n = parts[0]
+            t_b_n = parts[1].split("_")[0]
             
             # Логика интервалов
             ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
