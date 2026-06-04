@@ -160,16 +160,24 @@ if is_admin:
         m_pb = st.text_input("Пара Б (Фамилии)", "Сидоров/Борисов", key="m_pb")
         
         if st.button("➕ Добавить игру в список"):
+            unique_id = f"match_{int(time.time())}_{random.randint(100, 999)}"
+            
+            display_label = f"{m_ta} ({m_pa}) vs {m_tb} ({m_pb})"
+            
             match_info = {
-                "id": f"{m_ta}_vs_{m_tb}",
-                "label": f"{m_ta} ({m_pa}) vs {m_tb} ({m_pb})",
+                "id": unique_id,
+                "label": display_label,
                 "ta": m_ta, "pa": m_pa, "tb": m_tb, "pb": m_pb
             }
-            if match_info["id"] not in [m["id"] for m in st.session_state.schedule]:
+            # Проверяем уникальность по названию и фамилиям
+            if match_info["label"] not in [m["label"] for m in st.session_state.schedule]:
                 st.session_state.schedule.append(match_info)
                 save_schedule(st.session_state.schedule)
                 st.success("Матч добавлен!")
                 st.rerun()
+            else:
+                st.warning("Этот матч с такими игроками уже есть в расписании!")
+
 
     # --- НОВЫЙ БЛОК: ГЕНЕРАТОР ССЫЛОК ДЛЯ QR ---
     with st.sidebar.expander("🔗 Ссылки для маркеров (QR)"):
@@ -251,22 +259,23 @@ st.title("🏆 ПОЛОЖЕНИЕ КОМАНД")
 
 if not df.empty:
     summary = []
-    # Работаем со списком уникальных матчей заранее
-    unique_matches_in_df = df.match_id.unique()
-
+    
     for t in st.session_state.team_list:
         t_pts, t_ud, details = 0.0, 0, []
         
-        # ТОЧНЫЙ ПОИСК: ищем команду только как целое название в ID матча
-        m_ids = [m for m in unique_matches_in_df if t in m.split("_vs_")]
+        # Ищем в расписании все матчи, где играет текущий клуб `t`
+        club_matches = [m for m in st.session_state.schedule if m["ta"] == t or m["tb"] == t]
         
-        for m_id in m_ids:
-            m_data = df[df.match_id == m_id]
-            # t_a_n, t_b_n = m_id.split("_vs_")
-            parts = m_id.split("_vs_")
-            t_a_n = parts[0]
-            t_b_n = parts[1].split("_")[0]
+        for m in club_matches:
+            m_id = m["id"]
+            t_a_n = m["ta"]
+            t_b_n = m["tb"]
             
+            # Фильтруем данные из CSV конкретно по этому уникальному ID матча
+            m_data = df[df.match_id == m_id]
+            if m_data.empty:
+                continue
+                
             # Логика интервалов
             ints = [range(1,10), range(10,19), range(1,19)] if format_type == "9-9-18" else [range(1,7), range(7,13), range(13,19), range(1,19)]
             
@@ -291,7 +300,7 @@ if not df.empty:
         det_str = f"({'+'.join(details)})" if details else ""
         summary.append({
             "КОМАНДА": t,
-            "МАТЧИ": f"{len(m_ids)}", # Убрал "из 3", так как матчей может быть другое кол-во
+            "МАТЧИ": f"{len(club_matches)}", 
             "POINTS": t_pts,
             "ИТОГ": f"{t_pts:g} {det_str}",
             "U/D": t_ud
@@ -458,16 +467,24 @@ if not m_df.empty:
     st.markdown("---") # Линия-разделитель
 
     # КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
-    unique_matches = df.match_id.unique()
+        # КАРТОЧКИ МАТЧЕЙ (ДИЗАЙН С ОГРОМНЫМ СЧЕТОМ)
+    visible_matches = st.session_state.schedule
     if filter_t != "Все команды":
-        unique_matches = [m for m in unique_matches if filter_t in m]
-    for i in range(0, len(unique_matches), 2):
+        visible_matches = [m for m in visible_matches if m["ta"] == filter_t or m["tb"] == filter_t]
+
+    for i in range(0, len(visible_matches), 2):
         row = st.columns(2)
         for j in range(2):
-            if i + j < len(unique_matches):
-                curr_m = unique_matches[i+j]
+            if i + j < len(visible_matches):
+                match_info = visible_matches[i+j]
+                curr_m = match_info["id"] 
+                
+                t_a_n = match_info["ta"]
+                t_b_n = match_info["tb"]
+                p_a_disp = match_info["pa"]
+                p_b_disp = match_info["pb"]
+                
                 m_data = df[df.match_id == curr_m]
-                t_a_n, t_b_n = curr_m.split("_vs_")
                 
                 # Считаем очки матча (Match Points)
                 pts_a, pts_b = 0.0, 0.0
@@ -494,7 +511,7 @@ if not m_df.empty:
                         res = m_data[m_data.hole == h].result.values
                         bg = "#eee"
                         if len(res) > 0:
-                            bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#bbb"
+                            bg = "#ff4d4d" if res == 1 else "#007bff" if res == 2 else "#bbb"
                         row_html += f'<div style="width:8px; height:8px; background:{bg}; border-radius:50%;"></div>'
                     row_html += f'</div><div style="width:40px; text-align:right;">{s_right}</div></div>'
                     return row_html
@@ -506,9 +523,6 @@ if not m_df.empty:
                         if aw == bw: pts_a += 0.5; pts_b += 0.5
                         elif aw > bw: pts_a += 1.0
                         else: pts_b += 1.0
-    
-                p_a_disp = m_data.iloc[-1]['pair_a'] if not m_data.empty else "Пара А"
-                p_b_disp = m_data.iloc[-1]['pair_b'] if not m_data.empty else "Пара Б"
     
                 with row[j]:
                     st.markdown(f"""
@@ -540,4 +554,3 @@ if not m_df.empty:
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-                    
