@@ -103,7 +103,12 @@ if view_mode == "live":
     is_viewer = True
     team_a, team_b, p_a, p_b = "Клуб А", "Клуб Б", "Пара А", "Пара Б"
     match_id = None
-    format_type = "9-9-18"  # Заглушка формата для зрителя
+    
+    if os.path.exists("shared_format.txt"):
+        with open("shared_format.txt", "r", encoding="utf-8") as f:
+            format_type = f.read().strip()
+    else:
+        format_type = "9-9-18"
 
 elif url_match_id:
     # Ищем матч по ID из ссылки
@@ -232,9 +237,18 @@ else:
         st.query_params.clear()
         st.rerun()
 
-# Выбор формата зачета скрыт от зрителей, чтобы они ничего не сбили
+# Выбор формата зачета скрыт от зрителей
 if not is_viewer:
-    format_type = st.sidebar.selectbox("Формат зачета", ["9-9-18", "6-6-6-18"], key="fmt_sel")
+    # Задаем индекс по умолчанию, чтобы селектор не сбрасывался
+    fmt_options = ["9-9-18", "6-6-6-18"]
+    saved_fmt = format_type if 'format_type' in locals() else "9-9-18"
+    default_idx = fmt_options.index(saved_fmt) if saved_fmt in fmt_options else 0
+
+    format_type = st.sidebar.selectbox("Формат зачета", fmt_options, index=default_idx, key="fmt_sel")
+    
+    # СИНХРОНИЗАЦИЯ: Как только админ меняет формат, мы пишем его в файл для зрителей
+    with open("shared_format.txt", "w", encoding="utf-8") as f:
+        f.write(format_type)
 
 # ======================
 # СИСТЕМА СПАСЕНИЯ ДАННЫХ (ТОЛЬКО ДЛЯ АДМИНА)
@@ -493,7 +507,7 @@ else:
                     res = m_df[m_df.hole == h].result.values
                     bg = "#444"
                     if len(res) > 0: 
-                        # ИСПРАВЛЕНО: 1 — Красный (Команда А), 2 — Синий (Команда Б)
+                        # 1 — Красный (Команда А), 2 — Синий (Команда Б)
                         bg = "#ff4d4d" if res[0] == 1 else "#007bff" if res[0] == 2 else "#888"
                     html += f'<div style="width:28px; height:28px; background:{bg}; border-radius:50%; border:1px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:white;">{h}</div>'
                 return html + '</div>'
