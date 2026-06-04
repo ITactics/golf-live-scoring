@@ -228,11 +228,17 @@ if is_admin:
                 new_sch = []
                 for m_id in restored_df['match_id'].unique():
                     m_data = restored_df[restored_df['match_id'] == m_id].iloc[0]
-                    t_a, t_b = m_id.split("_vs_")
+                    
+                    # Безопасно берем названия клубов и фамилии из колонок CSV
+                    t_a = m_data['team_a'] if 'team_a' in restored_df.columns else "Клуб А"
+                    t_b = m_data['team_b'] if 'team_b' in restored_df.columns else "Клуб Б"
+                    p_a = m_data['pair_a'] if 'pair_a' in restored_df.columns else "Пара А"
+                    p_b = m_data['pair_b'] if 'pair_b' in restored_df.columns else "Пара Б"
+                    
                     new_sch.append({
                         "id": m_id,
-                        "label": f"{t_a} ({m_data['pair_a']}) vs {t_b} ({m_data['pair_b']})",
-                        "ta": t_a, "pa": m_data['pair_a'], "tb": t_b, "pb": m_data['pair_b']
+                        "label": f"{t_a} ({p_a}) vs {t_b} ({p_b})",
+                        "ta": t_a, "pa": p_a, "tb": t_b, "pb": p_b
                     })
                 save_schedule(new_sch)
                 st.session_state.schedule = new_sch
