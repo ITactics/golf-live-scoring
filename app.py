@@ -541,15 +541,22 @@ else:
             
             for r in intervals:
                 subset = m_df[m_df.hole.isin(r)]
-                if not subset.empty:
-                    aw, bw = len(subset[subset.result==1]), len(subset[subset.result==2])
+            
+                # Очко за девятку/шестерку появляется только после завершения всего блока
+                if len(subset) == len(r):
+            
+                    aw = len(subset[subset.result == 1])
+                    bw = len(subset[subset.result == 2])
+            
                     if aw == bw:
-                        main_pts_a += 0.5; main_pts_b += 0.5
+                        main_pts_a += 0.5
+                        main_pts_b += 0.5
+            
                     elif aw > bw:
                         main_pts_a += 1.0
-                    else:
-                        main_pts_b += 1.0
 
+        else:
+            main_pts_b += 1.0
             # ВЫВОДИМ ОЧКИ МАТЧА (Красный слева, Синий справа)
             st.markdown(f"""
                 <div style='text-align:center;'>
@@ -619,12 +626,23 @@ if 'filter_t' in locals():
     
                 for r in intervals:
                     sub = m_data[m_data.hole.isin(r)]
-                    if not sub.empty:
-                        aw, bw = len(sub[sub.result==1]), len(sub[sub.result==2])
-                        if aw == bw: pts_a += 0.5; pts_b += 0.5
-                        elif aw > bw: pts_a += 1.0
-                        else: pts_b += 1.0
-    
+                
+                    # Начисляем Match Point только после завершения всей девятки/шестерки
+                    if len(sub) == len(r):
+                
+                        aw = len(sub[sub.result == 1])
+                        bw = len(sub[sub.result == 2])
+                
+                        if aw == bw:
+                            pts_a += 0.5
+                            pts_b += 0.5
+                
+                        elif aw > bw:
+                            pts_a += 1.0
+                
+                        else:
+                            pts_b += 1.0
+                    
                 with row[j]:
                     st.markdown(f"""
                     <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-left: 10px solid #ff4d4d; border-right: 10px solid #007bff; color: black !important;">
