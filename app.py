@@ -555,8 +555,9 @@ else:
                     elif aw > bw:
                         main_pts_a += 1.0
 
-        else:
-            main_pts_b += 1.0
+                    else:
+                        main_pts_b += 1.0
+                        
             # ВЫВОДИМ ОЧКИ МАТЧА (Красный слева, Синий справа)
             st.markdown(f"""
                 <div style='text-align:center;'>
